@@ -181,6 +181,8 @@ if __name__ == "__main__":
     with open(ros_rec_json_path, "r") as file:
         ros_rec_data = json.load(file)
 
+    time_precision = ros_rec_data["time_precision"]
+
     data_x_cur = ros_rec_data["/falcon/ground_truth/odometry"]
     t_x_cur = np.array(data_x_cur["t"])
     p_cur = np.array(data_x_cur["p"])
@@ -215,7 +217,6 @@ if __name__ == "__main__":
     print(f"x_pred_traj_.shape: {x_pred_traj.shape}")
 
     # Set times to a specific precision
-    time_precision = 5
     t_x_cur = np.round(t_x_cur, time_precision)
     t_x_cur_est = np.round(t_x_cur_est, time_precision)
     t_ref_traj = np.round(t_ref_traj, time_precision)
