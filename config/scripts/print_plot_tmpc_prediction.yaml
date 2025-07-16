@@ -1,0 +1,5 @@
+data:
+  runtime_json_name: 2025-07-16_09-16__ReferenceTrajectory_StaticPolyhedronConstraints_0
+  ros_rec_json_name: 2025-07-16_sim_falcon_hmpc_no_P_no_dist_K_no_meas_noise_L
+  t_to_print: -1
+  t_to_plot: 3
