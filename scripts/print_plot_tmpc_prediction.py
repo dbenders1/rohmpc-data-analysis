@@ -1,4 +1,3 @@
-from os import path
 import argparse
 import json
 import logging
@@ -9,11 +8,78 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 
+from enum import Enum
+from matplotlib.legend_handler import HandlerPatch
+from matplotlib.patches import Circle, Ellipse
+from os import path
 from pathlib import Path
 
 FLOAT_TOL = 1e-6
 
+
+class Colors(Enum):
+    GREY = (0.859375, 0.859375, 0.859375)
+    ORANGE = (1, 0.6484375, 0)
+    PURPLE = (0.5, 0, 0.5)
+    VIRIDIS_0 = (0.21875, 0.347656, 0.546875)
+
+
+class HandlerCircle(HandlerPatch):
+    def create_artists(
+        self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
+    ):
+        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
+        p = Circle(xy=center, radius=height / 2)
+        self.update_prop(p, orig_handle, legend)
+        p.set_transform(trans)
+        return [p]
+
+
+class HandlerEllipse(HandlerPatch):
+    def create_artists(
+        self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
+    ):
+        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
+        p = Ellipse(xy=center, width=width, height=height)
+        self.update_prop(p, orig_handle, legend)
+        p.set_transform(trans)
+        return [p]
+
+
+def set_fig_properties():
+    props = dict()
+    props["titlepad"] = 4
+    props["tickpad"] = 1
+    props["xlabelpad"] = 0
+    props["ylabelpad"] = 1
+    props["zlabelpad"] = 0
+    props["textsize"] = plt.rcParams["xtick.labelsize"]
+    return props
+
+
+def set_plt_properties():
+    # Plot settings
+    fontsize = 10
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"]
+    plt.rcParams["text.usetex"] = True
+    plt.rcParams["text.latex.preamble"] = r"\usepackage{bm}"
+    plt.rcParams["font.size"] = fontsize
+    plt.rcParams["axes.labelsize"] = fontsize - 2
+    plt.rcParams["axes.titlesize"] = fontsize
+    plt.rcParams["xtick.labelsize"] = fontsize - 4
+    plt.rcParams["ytick.labelsize"] = fontsize - 4
+    plt.rcParams["legend.fontsize"] = fontsize - 4
+    # Set dpi for saving figures
+    plt.rcParams["savefig.dpi"] = 300
+    plt.rcParams["figure.dpi"] = 300
+
+
 np.set_printoptions(threshold=np.inf)
+
+
+def compute_alpha(alpha_min, alpha_max, t, t_end):
+    return alpha_max - (alpha_max - alpha_min) * (t / t_end) if t_end > 0 else alpha_max
 
 
 def quaternion_to_zyx_euler(q):
@@ -79,6 +145,20 @@ if __name__ == "__main__":
     t_to_print = config["data"]["t_to_print"]
     t_to_plot = config["data"]["t_to_plot"]
 
+    plot_settings = config["plot_settings"]
+    r_tmpc_ref = plot_settings["r_tmpc_ref"]
+    r_tmpc = plot_settings["r_tmpc"]
+    r_x0 = plot_settings["r_x0"]
+    r_x = plot_settings["r_x"]
+
+    c_tmpc_ref = mcolors.CSS4_COLORS["red"]
+    c_tmpc = Colors.ORANGE.value
+    c_x0 = Colors.PURPLE.value
+    c_x = mcolors.CSS4_COLORS["green"]
+    c_xf = mcolors.CSS4_COLORS["black"]
+    alpha_max = 1
+    alpha_min = 0.5
+
     # Read ROS runtime json data
     runtime_json_path = f"{runtime_json_dir}/{runtime_json_name}.json"
     log.warning(f"Selected runtime json file: {runtime_json_path}")
@@ -134,9 +214,6 @@ if __name__ == "__main__":
     print(f"u_pred_traj_.shape: {u_pred_traj.shape}")
     print(f"x_pred_traj_.shape: {x_pred_traj.shape}")
 
-    n_tmpc_runs = min(len(t_x_cur_est), len(t_ref_traj), len(t_pred_traj))
-    N_tmpc = x_ref_traj.shape[1] - 1
-
     # Set times to a specific precision
     time_precision = 5
     t_x_cur = np.round(t_x_cur, time_precision)
@@ -144,17 +221,32 @@ if __name__ == "__main__":
     t_ref_traj = np.round(t_ref_traj, time_precision)
     t_pred_traj = np.round(t_pred_traj, time_precision)
 
+    # Check t_to_print and t_to_plot
+    t_min = min(np.min(t_x_cur_est), np.min(t_ref_traj), np.min(t_pred_traj))
+    t_max = max(np.max(t_x_cur_est), np.max(t_ref_traj), np.max(t_pred_traj))
+    if t_to_print != -1 and (t_to_print < t_min or t_to_print > t_max):
+        raise ValueError(
+            f"t_to_print ({t_to_print}) should be either -1 or be contained within bounds [{t_min}, {t_max}]"
+        )
+
+    # Determine various parameters of runtime data
+    n_tmpc = min(len(t_x_cur_est), len(t_ref_traj), len(t_pred_traj))
+    N_tmpc = x_ref_traj.shape[1] - 1
+    ts_tmpc = np.round(t_ref_traj[1] - t_ref_traj[0], time_precision)
+    ts_sim = np.round(t_x_cur[1] - t_x_cur[0], time_precision)
+    print(f"n_tmpc: {n_tmpc}, N_tmpc: {N_tmpc}, ts_tmpc: {ts_tmpc}, ts_sim: {ts_sim}")
+
     # Select data to print
     if t_to_print < 0:
-        t_cur_idx = -1
-        t_cur_est_idx = -1
-        t_ref_traj_idx = -1
-        t_pred_traj_idx = -1
+        t_x_cur_print_idx = -1
+        t_x_cur_est_print_idx = -1
+        t_ref_traj_print_idx = -1
+        t_pred_traj_print_idx = -1
     else:
-        t_cur_idx = np.abs(t_x_cur - t_to_print).argmin()
-        t_cur_est_idx = np.abs(t_x_cur_est - t_to_print).argmin()
-        t_ref_traj_idx = np.abs(t_ref_traj - t_to_print).argmin()
-        t_pred_traj_idx = np.abs(t_pred_traj - t_to_print).argmin()
+        t_x_cur_print_idx = np.abs(t_x_cur - t_to_print).argmin()
+        t_x_cur_est_print_idx = np.abs(t_x_cur_est - t_to_print).argmin()
+        t_ref_traj_print_idx = np.abs(t_ref_traj - t_to_print).argmin()
+        t_pred_traj_print_idx = np.abs(t_pred_traj - t_to_print).argmin()
 
     # Check if the estimated state overlaps with the ground truth state
     x_cur_mpc_start = x_cur[np.where(np.isin(t_x_cur, t_x_cur_est))[0], :]
@@ -177,9 +269,9 @@ if __name__ == "__main__":
             )
 
     # Compute objective values
-    if t_cur_est_idx < 0:
-        pobj_comp = np.zeros(n_tmpc_runs)
-        for t_idx in range(n_tmpc_runs):
+    if t_x_cur_est_print_idx < 0:
+        pobj_comp = np.zeros(n_tmpc)
+        for t_idx in range(n_tmpc):
             pobj_comp[t_idx] = 0
             for k in range(N_tmpc):
                 pobj_comp[t_idx] += (
@@ -196,19 +288,147 @@ if __name__ == "__main__":
         pobj_comp = 0
         for k in range(N_tmpc):
             pobj_comp += (
-                (x_pred_traj[t_pred_traj_idx, k, :] - x_ref_traj[t_ref_traj_idx, k, :])
+                (
+                    x_pred_traj[t_pred_traj_print_idx, k, :]
+                    - x_ref_traj[t_ref_traj_print_idx, k, :]
+                )
                 @ Q
                 @ (
-                    x_pred_traj[t_pred_traj_idx, k, :]
-                    - x_ref_traj[t_ref_traj_idx, k, :]
+                    x_pred_traj[t_pred_traj_print_idx, k, :]
+                    - x_ref_traj[t_ref_traj_print_idx, k, :]
                 )
             )
             pobj_comp += (
-                (u_pred_traj[t_pred_traj_idx, k, :] - u_ref_traj[t_ref_traj_idx, k, :])
+                (
+                    u_pred_traj[t_pred_traj_print_idx, k, :]
+                    - u_ref_traj[t_ref_traj_print_idx, k, :]
+                )
                 @ R
                 @ (
-                    u_pred_traj[t_pred_traj_idx, k, :]
-                    - u_ref_traj[t_ref_traj_idx, k, :]
+                    u_pred_traj[t_pred_traj_print_idx, k, :]
+                    - u_ref_traj[t_ref_traj_print_idx, k, :]
                 )
             )
     # print(f"pobj_comp: {pobj_comp}")
+
+    # Select data to plot
+    if t_to_plot == -1:
+        raise ValueError("t_to_plot must be a non-negative value")
+    else:
+        t_x_cur_plot_start_idx = np.abs(t_x_cur - t_to_plot).argmin()
+        t_x_cur_plot_end_idx = np.abs(
+            t_x_cur - np.round(t_to_plot + N_tmpc * ts_tmpc, time_precision)
+        ).argmin()
+        t_x_cur_est_plot_idx = np.abs(t_x_cur_est - t_to_plot).argmin()
+        t_ref_traj_plot_idx = np.abs(t_ref_traj - t_to_plot).argmin()
+        t_pred_traj_plot_idx = np.abs(t_pred_traj - t_to_plot).argmin()
+
+    print(f"t_x_cur_plot_start_idx: {t_x_cur_plot_start_idx}")
+    print(f"t_x_cur_plot_end_idx: {t_x_cur_plot_end_idx}")
+
+    # Create figure
+    set_plt_properties()
+    props = set_fig_properties()
+    fig, ax = plt.subplots()
+
+    # Add TMPC reference trajectory to plot
+    handles_tmpc_ref = []
+    for k in range(N_tmpc + 1):
+        tmpc_ref = Circle(
+            (
+                x_ref_traj[t_ref_traj_plot_idx, k, 0],
+                x_ref_traj[t_ref_traj_plot_idx, k, 1],
+            ),
+            r_tmpc_ref,
+            facecolor=c_tmpc_ref,
+            alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, N_tmpc * ts_tmpc),
+            zorder=2,
+            label="TMPC ref traj",
+        )
+        handles_tmpc_ref.append(ax.add_patch(tmpc_ref))
+
+    # Add TMPC prediction to plot
+    handle_x0 = ax.add_patch(
+        Circle(
+            (
+                x_cur_est[t_x_cur_est_plot_idx, 0],
+                x_cur_est[t_x_cur_est_plot_idx, 1],
+            ),
+            r_x0,
+            facecolor=c_x0,
+            alpha=compute_alpha(alpha_min, alpha_max, 0, N_tmpc * ts_tmpc),
+            zorder=4,
+            label="TMPC init state",
+        )
+    )
+    handles_tmpc_pred = []
+    for k in range(1, N_tmpc + 1):
+        tmpc_pred = Circle(
+            (
+                x_pred_traj[t_pred_traj_plot_idx, k, 0],
+                x_pred_traj[t_pred_traj_plot_idx, k, 1],
+            ),
+            r_tmpc,
+            facecolor=c_tmpc,
+            alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, N_tmpc * ts_tmpc),
+            zorder=3,
+            label="TMPC prediction",
+        )
+        handles_tmpc_pred.append(ax.add_patch(tmpc_pred))
+
+    # TODO: add increasing tube size to plot
+
+    # Add closed-loop state to plot
+    handles_x = []
+    for t_x_cur_plot_idx in range(t_x_cur_plot_start_idx, t_x_cur_plot_end_idx + 1):
+        x = Circle(
+            (x_cur[t_x_cur_plot_idx, 0], x_cur[t_x_cur_plot_idx, 1]),
+            r_x,
+            facecolor=c_x,
+            alpha=compute_alpha(
+                alpha_min,
+                alpha_max,
+                (t_x_cur_plot_idx - t_x_cur_plot_start_idx) * ts_sim,
+                N_tmpc * ts_tmpc,
+            ),
+            zorder=5,
+            label="Closed-loop state",
+        )
+        handles_x.append(ax.add_patch(x))
+
+    # Add title, etc. to plot
+    # ax.set_title(f"TMPC prediction", pad=props["titlepad"])
+    ax.set_xlim(-0.01, 0.01)
+    ax.set_ylim(0.025, 0.045)
+    # ax.set_xlim(-1.166667, 1.166667)
+    # ax.set_ylim(-0.5, 0.5)
+    # ax.set_xlim(-0.8, 2)
+    # ax.set_ylim(-0.6, 0.6)
+    # ax.set_xlim(0, 1.166666)
+    # ax.set_ylim(-0.5, 0)
+    # edge_val = 4
+    # ax.set_xlim(-edge_val, edge_val)
+    # ax.set_ylim(-edge_val, edge_val)
+    ax.set_xlabel("$p^x$ (m)")
+    ax.set_ylabel("$p^y$ (m)")
+    ax.xaxis.labelpad = props["xlabelpad"]
+    ax.yaxis.labelpad = props["ylabelpad"]
+    ax.tick_params(pad=props["tickpad"])
+    ax.set_axisbelow(True)
+    handles = [
+        handles_tmpc_ref[0],
+        handle_x0,
+        handles_tmpc_pred[0],
+        handles_x[0],
+    ]
+    ax.legend(
+        handles=handles,
+        handler_map={
+            Circle: HandlerCircle(),
+            Ellipse: HandlerEllipse(),
+        },
+        loc="upper right",
+    )
+    ax.grid(True)
+    ax.set_aspect("equal", adjustable="box")
+    plt.show()

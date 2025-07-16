@@ -3,3 +3,9 @@ data:
   ros_rec_json_name: 2025-07-16_sim_falcon_hmpc_no_P_no_dist_K_no_meas_noise_L
   t_to_print: -1
   t_to_plot: 3
+
+plot_settings:
+  r_tmpc_ref: 0.003
+  r_tmpc: 0.002
+  r_x0: 0.002
+  r_x: 0.001
