@@ -46,6 +46,27 @@ class HandlerEllipse(HandlerPatch):
         return [p]
 
 
+def compute_pobj(u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, Q_dt, R_dt, P_dt):
+    pobj = 0
+    for k in range(N):
+        pobj += (
+            (x_pred_traj[k, :] - x_ref_traj[k, :])
+            @ Q_dt
+            @ (x_pred_traj[k, :] - x_ref_traj[k, :])
+        )
+        pobj += (
+            (u_pred_traj[k, :] - u_ref_traj[k, :])
+            @ R_dt
+            @ (u_pred_traj[k, :] - u_ref_traj[k, :])
+        )
+    pobj += (
+        (x_pred_traj[N, :] - x_ref_traj[N, :])
+        @ P_dt
+        @ (x_pred_traj[N, :] - x_ref_traj[N, :])
+    )
+    return pobj
+
+
 def set_fig_properties():
     props = dict()
     props["titlepad"] = 4
@@ -168,8 +189,11 @@ if __name__ == "__main__":
         runtime_data = json.load(file)
 
     runtime_static_data = runtime_data["static_data"]
+    stepsize_tmpc = runtime_static_data["stepsize"]
+    steps_tmpc = runtime_static_data["steps"]
     Q = np.array(runtime_static_data["Q"])
     R = np.array(runtime_static_data["R"])
+    P = np.array(runtime_static_data["P"])
 
     # Read ROS recording json data
     ros_rec_json_path = f"{ros_rec_json_dir}/{ros_rec_json_name}.json"
@@ -224,8 +248,12 @@ if __name__ == "__main__":
     # Determine various parameters of runtime data
     n_tmpc = min(len(t_x_cur_est), len(t_ref_traj), len(t_pred_traj))
     N_tmpc = x_ref_traj.shape[1] - 1
+    dt_tmpc = steps_tmpc * stepsize_tmpc
     ts_tmpc = np.round(t_ref_traj[1] - t_ref_traj[0], time_precision)
     ts_sim = np.round(t_x_cur[1] - t_x_cur[0], time_precision)
+    Q_dt = Q * dt_tmpc
+    R_dt = R * dt_tmpc
+    P_dt = P * dt_tmpc
     print(f"n_tmpc: {n_tmpc}, N_tmpc: {N_tmpc}, ts_tmpc: {ts_tmpc}, ts_sim: {ts_sim}")
 
     # Select data to print
@@ -264,44 +292,28 @@ if __name__ == "__main__":
     if t_x_cur_est_print_idx < 0:
         pobj_comp = np.zeros(n_tmpc)
         for t_idx in range(n_tmpc):
-            pobj_comp[t_idx] = 0
-            for k in range(N_tmpc):
-                pobj_comp[t_idx] += (
-                    (x_pred_traj[t_idx, k, :] - x_ref_traj[t_idx, k, :])
-                    @ Q
-                    @ (x_pred_traj[t_idx, k, :] - x_ref_traj[t_idx, k, :])
-                )
-                pobj_comp[t_idx] += (
-                    (u_pred_traj[t_idx, k, :] - u_ref_traj[t_idx, k, :])
-                    @ R
-                    @ (u_pred_traj[t_idx, k, :] - u_ref_traj[t_idx, k, :])
-                )
+            pobj_comp[t_idx] = compute_pobj(
+                u_pred_traj[t_idx, :, :],
+                x_pred_traj[t_idx, :, :],
+                u_ref_traj[t_idx, :, :],
+                x_ref_traj[t_idx, :, :],
+                N_tmpc,
+                Q_dt,
+                R_dt,
+                P_dt,
+            )
     else:
-        pobj_comp = 0
-        for k in range(N_tmpc):
-            pobj_comp += (
-                (
-                    x_pred_traj[t_pred_traj_print_idx, k, :]
-                    - x_ref_traj[t_ref_traj_print_idx, k, :]
-                )
-                @ Q
-                @ (
-                    x_pred_traj[t_pred_traj_print_idx, k, :]
-                    - x_ref_traj[t_ref_traj_print_idx, k, :]
-                )
-            )
-            pobj_comp += (
-                (
-                    u_pred_traj[t_pred_traj_print_idx, k, :]
-                    - u_ref_traj[t_ref_traj_print_idx, k, :]
-                )
-                @ R
-                @ (
-                    u_pred_traj[t_pred_traj_print_idx, k, :]
-                    - u_ref_traj[t_ref_traj_print_idx, k, :]
-                )
-            )
-    # print(f"pobj_comp: {pobj_comp}")
+        pobj_comp = compute_pobj(
+            u_pred_traj[t_pred_traj_print_idx, :, :],
+            x_pred_traj[t_pred_traj_print_idx, :, :],
+            u_ref_traj[t_ref_traj_print_idx, :, :],
+            x_ref_traj[t_ref_traj_print_idx, :, :],
+            N_tmpc,
+            Q_dt,
+            R_dt,
+            P_dt,
+        )
+    print(f"pobj_comp: {pobj_comp}")
 
     # Select data to plot
     if t_to_plot == -1:
