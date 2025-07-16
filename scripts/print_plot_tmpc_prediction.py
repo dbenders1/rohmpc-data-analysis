@@ -185,16 +185,7 @@ if __name__ == "__main__":
 
     data_x_cur = ros_rec_data["/falcon/ground_truth/odometry"]
     t_x_cur = np.array(data_x_cur["t"])
-    p_cur = np.array(data_x_cur["p"])
-    q_cur = np.array(data_x_cur["q"])
-    v_cur = np.array(data_x_cur["v"])
-    wb_cur = np.array(data_x_cur["wb"])
-    # Convert quaternion to Euler angles
-    eul_cur = np.zeros((3, q_cur.shape[1]))
-    for t in range(q_cur.shape[1]):
-        eul_cur[:, t] = quaternion_to_zyx_euler(q_cur[:, t])
-    x_cur = np.concatenate((p_cur, eul_cur, v_cur, wb_cur), axis=0)
-    x_cur = x_cur.T
+    x_cur = np.array(data_x_cur["x"])
     print(f"x_cur.shape: {x_cur.shape})")
 
     data_x_cur_est = ros_rec_data["/mpc/rec/current_state"]
