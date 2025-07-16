@@ -134,6 +134,9 @@ if __name__ == "__main__":
     print(f"u_pred_traj_.shape: {u_pred_traj.shape}")
     print(f"x_pred_traj_.shape: {x_pred_traj.shape}")
 
+    n_tmpc_runs = min(len(t_x_cur_est), len(t_ref_traj), len(t_pred_traj))
+    N_tmpc = x_ref_traj.shape[1] - 1
+
     # Set times to a specific precision
     time_precision = 5
     t_x_cur = np.round(t_x_cur, time_precision)
@@ -143,7 +146,10 @@ if __name__ == "__main__":
 
     # Select data to print
     if t_to_print < 0:
-        idx_to_print = -1
+        t_cur_idx = -1
+        t_cur_est_idx = -1
+        t_ref_traj_idx = -1
+        t_pred_traj_idx = -1
     else:
         t_cur_idx = np.abs(t_x_cur - t_to_print).argmin()
         t_cur_est_idx = np.abs(t_x_cur_est - t_to_print).argmin()
@@ -169,3 +175,40 @@ if __name__ == "__main__":
                 f"x_cur_mpc_start: {x_cur_mpc_start[first_diff_idx]}, "
                 f"x_cur_est: {x_cur_est[first_diff_idx]}"
             )
+
+    # Compute objective values
+    if t_cur_est_idx < 0:
+        pobj_comp = np.zeros(n_tmpc_runs)
+        for t_idx in range(n_tmpc_runs):
+            pobj_comp[t_idx] = 0
+            for k in range(N_tmpc):
+                pobj_comp[t_idx] += (
+                    (x_pred_traj[t_idx, k, :] - x_ref_traj[t_idx, k, :])
+                    @ Q
+                    @ (x_pred_traj[t_idx, k, :] - x_ref_traj[t_idx, k, :])
+                )
+                pobj_comp[t_idx] += (
+                    (u_pred_traj[t_idx, k, :] - u_ref_traj[t_idx, k, :])
+                    @ R
+                    @ (u_pred_traj[t_idx, k, :] - u_ref_traj[t_idx, k, :])
+                )
+    else:
+        pobj_comp = 0
+        for k in range(N_tmpc):
+            pobj_comp += (
+                (x_pred_traj[t_pred_traj_idx, k, :] - x_ref_traj[t_ref_traj_idx, k, :])
+                @ Q
+                @ (
+                    x_pred_traj[t_pred_traj_idx, k, :]
+                    - x_ref_traj[t_ref_traj_idx, k, :]
+                )
+            )
+            pobj_comp += (
+                (u_pred_traj[t_pred_traj_idx, k, :] - u_ref_traj[t_ref_traj_idx, k, :])
+                @ R
+                @ (
+                    u_pred_traj[t_pred_traj_idx, k, :]
+                    - u_ref_traj[t_ref_traj_idx, k, :]
+                )
+            )
+    # print(f"pobj_comp: {pobj_comp}")
