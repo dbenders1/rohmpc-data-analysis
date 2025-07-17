@@ -259,6 +259,13 @@ if __name__ == "__main__":
     print(f"n_tmpc: {n_tmpc}, N_tmpc: {N_tmpc}, ts_tmpc: {ts_tmpc}, ts_sim: {ts_sim}")
 
     # Check if the estimated state overlaps with the ground truth state
+    # Ensure that t_x_cur[-1] >= t_x_cur_est[-1]
+    if t_x_cur_est[-1] > t_x_cur[-1]:
+        log.warning(
+            "The estimated state has a recording after the ground truth state. Shrinking t_x_cur_est and x_cur_est"
+        )
+        t_x_cur_est = t_x_cur_est[t_x_cur_est <= t_x_cur[-1]]
+        x_cur_est = x_cur_est[: len(t_x_cur_est)]
     x_cur_mpc_start = x_cur[np.where(np.isin(t_x_cur, t_x_cur_est))[0], :]
     states_equal = np.all(np.abs(x_cur_mpc_start - x_cur_est) < FLOAT_TOL, axis=1)
     if np.all(states_equal):
