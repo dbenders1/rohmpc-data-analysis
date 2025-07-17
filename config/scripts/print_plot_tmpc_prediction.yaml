@@ -1,8 +1,12 @@
 data:
   runtime_json_name: 2025-07-16_18-25__ReferenceTrajectory_StaticPolyhedronConstraints_0
-  ros_rec_json_name: 2025-07-16_sim_falcon_hmpc_no_dist_K_no_meas_noise_L
-  # t: 2.5
-  # t: 3
+  # ros_rec_json_name: 2025-07-16_sim_falcon_hmpc_no_dist_K_no_meas_noise_L
+  # ros_rec_json_name: 2025-07-17_sim_falcon_hmpc_no_dist_K_no_meas_noise_L
+  # ros_rec_json_name: 2025-07-17_sim_falcon_hmpc_Qpos10_no_dist_K_no_meas_noise_L
+  ros_rec_json_name: 2025-07-17_sim_falcon_hmpc_Q1000eye_R1000eye_no_dist_K_no_meas_noise_L
+  t: -1
+  t: 2.5
+  t: 3
   t: 6
 
 print_settings:
