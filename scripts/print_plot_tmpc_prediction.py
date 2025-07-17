@@ -184,10 +184,7 @@ if __name__ == "__main__":
 
     print_settings = config["print_settings"]
     print_pobj_comp = print_settings["print_pobj_comp"]
-    print_u_track_err = print_settings["print_u_track_err"]
-    print_x_track_err = print_settings["print_x_track_err"]
-    print_p_track_err = print_settings["print_p_track_err"]
-    print_2d_p_track_err = print_settings["print_2d_p_track_err"]
+    print_track_err = print_settings["print_track_err"]
 
     plot_settings = config["plot_settings"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
@@ -367,53 +364,48 @@ if __name__ == "__main__":
         print(f"pobj_comp: {pobj_comp}")
 
     # Compute position tracking error
-    print_track_err = (
-        print_u_track_err
-        or print_x_track_err
-        or print_p_track_err
-        or print_2d_p_track_err
-    )
     if print_track_err:
-        u_idc = []
-        x_idc = []
-        u_track_err_str = ""
-        x_track_err_str = ""
-        if print_u_track_err:
-            u_idc = np.arange(NU)
-            u_track_err_str = "u"
-        if print_2d_p_track_err:
-            x_idc = np.arange(2)
-            x_track_err_str = "2d_p"
-        if print_p_track_err:
-            x_idc = np.arange(3)
-            x_track_err_str = "p"
-        if print_x_track_err:
-            x_idc = np.arange(NX)
-            x_track_err_str = "x"
-        track_err_str = f"{u_track_err_str}{x_track_err_str}_track_err"
-        if t_x_cur_est_idx < 0:
-            err = np.zeros(n_tmpc)
-            for t_idx in range(n_tmpc):
-                err[t_idx] = compute_track_err(
-                    u_pred_traj[t_idx, :, :],
-                    x_pred_traj[t_idx, :, :],
-                    u_ref_traj[t_idx, :, :],
-                    x_ref_traj[t_idx, :, :],
+        for key in print_track_err:
+            if key == "total":
+                u_idc = np.arange(NU)
+                x_idc = np.arange(NX)
+            elif key == "u":
+                u_idc = np.arange(NU)
+                x_idc = []
+            elif key == "x":
+                u_idc = []
+                x_idc = np.arange(NX)
+            elif key == "p":
+                u_idc = []
+                x_idc = np.arange(3)
+            elif key == "2d_p":
+                u_idc = []
+                x_idc = np.arange(2)
+            else:
+                raise ValueError(f"Unknown track error type '{key}'")
+            if t_x_cur_est_idx < 0:
+                track_err = np.zeros(n_tmpc)
+                for t_idx in range(n_tmpc):
+                    track_err[t_idx] = compute_track_err(
+                        u_pred_traj[t_idx, :, :],
+                        x_pred_traj[t_idx, :, :],
+                        u_ref_traj[t_idx, :, :],
+                        x_ref_traj[t_idx, :, :],
+                        N_tmpc,
+                        u_idc,
+                        x_idc,
+                    )
+            else:
+                track_err = compute_track_err(
+                    u_pred_traj[t_pred_traj_idx, :, :],
+                    x_pred_traj[t_pred_traj_idx, :, :],
+                    u_ref_traj[t_ref_traj_idx, :, :],
+                    x_ref_traj[t_ref_traj_idx, :, :],
                     N_tmpc,
                     u_idc,
                     x_idc,
                 )
-        else:
-            err = compute_track_err(
-                u_pred_traj[t_pred_traj_idx, :, :],
-                x_pred_traj[t_pred_traj_idx, :, :],
-                u_ref_traj[t_ref_traj_idx, :, :],
-                x_ref_traj[t_ref_traj_idx, :, :],
-                N_tmpc,
-                u_idc,
-                x_idc,
-            )
-        print(f"{track_err_str}: {err}")
+            print(f"{key}_track_err: {track_err}")
 
     # Select data to plot
     if t == -1:
