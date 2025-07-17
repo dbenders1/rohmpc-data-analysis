@@ -165,6 +165,9 @@ if __name__ == "__main__":
     ros_rec_json_name = config["data"]["ros_rec_json_name"]
     t = config["data"]["t"]
 
+    print_settings = config["print_settings"]
+    print_pobj = print_settings["print_pobj"]
+
     plot_settings = config["plot_settings"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
     r_tmpc = plot_settings["r_tmpc"]
@@ -315,7 +318,8 @@ if __name__ == "__main__":
             R_dt,
             P_dt,
         )
-    # print(f"pobj_comp: {pobj_comp}")
+    if print_pobj:
+        print(f"pobj_comp: {pobj_comp}")
 
     # Select data to plot
     if t == -1:

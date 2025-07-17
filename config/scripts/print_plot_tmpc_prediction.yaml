@@ -5,6 +5,9 @@ data:
   # t: 3
   t: 6
 
+print_settings:
+  print_pobj: True
+
 plot_settings:
   r_tmpc_ref: 0.0003
   r_tmpc: 0.0002
