@@ -408,15 +408,11 @@ if __name__ == "__main__":
 
     # Add title, etc. to plot
     # ax.set_title(f"TMPC prediction", pad=props["titlepad"])
-    # t=2.5
-    ax.set_xlim(-0.01, 0.01)
-    ax.set_ylim(-0.001, 0.021)
-    # t=3
-    # ax.set_xlim(-0.01, 0.01)
-    # ax.set_ylim(0.025, 0.045)
-    # t=6
-    # ax.set_xlim(-0.01, 0.01)
-    # ax.set_ylim(0.305, 0.325)
+    xy_diff = 0.01
+    x_mid = x_pred_traj[t_pred_traj_idx, int(N_tmpc / 2), 0]
+    y_mid = x_pred_traj[t_pred_traj_idx, int(N_tmpc / 2), 1]
+    ax.set_xlim(x_mid - xy_diff, x_mid + xy_diff)
+    ax.set_ylim(y_mid - xy_diff, y_mid + xy_diff)
     # edge_val = 0.001
     # ax.set_xlim(-edge_val, edge_val)
     # ax.set_ylim(-edge_val, edge_val)
