@@ -163,8 +163,7 @@ if __name__ == "__main__":
         config = yaml.load(file, Loader=yaml.FullLoader)
     runtime_json_name = config["data"]["runtime_json_name"]
     ros_rec_json_name = config["data"]["ros_rec_json_name"]
-    t_to_print = config["data"]["t_to_print"]
-    t_to_plot = config["data"]["t_to_plot"]
+    t = config["data"]["t"]
 
     plot_settings = config["plot_settings"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
@@ -240,9 +239,9 @@ if __name__ == "__main__":
     # Check t_to_print and t_to_plot
     t_min = min(np.min(t_x_cur_est), np.min(t_ref_traj), np.min(t_pred_traj))
     t_max = max(np.max(t_x_cur_est), np.max(t_ref_traj), np.max(t_pred_traj))
-    if t_to_print != -1 and (t_to_print < t_min or t_to_print > t_max):
+    if t != -1 and (t < t_min or t > t_max):
         raise ValueError(
-            f"t_to_print ({t_to_print}) should be either -1 or be contained within bounds [{t_min}, {t_max}]"
+            f"t ({t}) should be either -1 or be contained within bounds [{t_min}, {t_max}]"
         )
 
     # Determine various parameters of runtime data
@@ -255,18 +254,6 @@ if __name__ == "__main__":
     R_dt = R * dt_tmpc
     P_dt = P * dt_tmpc
     print(f"n_tmpc: {n_tmpc}, N_tmpc: {N_tmpc}, ts_tmpc: {ts_tmpc}, ts_sim: {ts_sim}")
-
-    # Select data to print
-    if t_to_print < 0:
-        t_x_cur_print_idx = -1
-        t_x_cur_est_print_idx = -1
-        t_ref_traj_print_idx = -1
-        t_pred_traj_print_idx = -1
-    else:
-        t_x_cur_print_idx = np.abs(t_x_cur - t_to_print).argmin()
-        t_x_cur_est_print_idx = np.abs(t_x_cur_est - t_to_print).argmin()
-        t_ref_traj_print_idx = np.abs(t_ref_traj - t_to_print).argmin()
-        t_pred_traj_print_idx = np.abs(t_pred_traj - t_to_print).argmin()
 
     # Check if the estimated state overlaps with the ground truth state
     x_cur_mpc_start = x_cur[np.where(np.isin(t_x_cur, t_x_cur_est))[0], :]
@@ -288,8 +275,23 @@ if __name__ == "__main__":
                 f"x_cur_est: {x_cur_est[first_diff_idx]}"
             )
 
+    # Select data to print and plot
+    if t < 0:
+        t_x_cur_est_idx = -1
+        t_pred_traj_idx = -1
+        t_ref_traj_idx = -1
+    else:
+        t_x_cur_est_idx = np.abs(t_x_cur_est - t).argmin()
+        t_mpc_start = t_x_cur_est[t_x_cur_est_idx]
+        t_x_cur_start_idx = np.abs(t_x_cur - t_mpc_start).argmin()
+        t_x_cur_end_idx = np.abs(
+            t_x_cur - np.round(t_mpc_start + N_tmpc * ts_tmpc, time_precision)
+        ).argmin()
+        t_pred_traj_idx = np.abs(t_pred_traj - t).argmin()
+        t_ref_traj_idx = np.abs(t_ref_traj - t).argmin()
+
     # Compute objective values
-    if t_x_cur_est_print_idx < 0:
+    if t_x_cur_est_idx < 0:
         pobj_comp = np.zeros(n_tmpc)
         for t_idx in range(n_tmpc):
             pobj_comp[t_idx] = compute_pobj(
@@ -304,31 +306,35 @@ if __name__ == "__main__":
             )
     else:
         pobj_comp = compute_pobj(
-            u_pred_traj[t_pred_traj_print_idx, :, :],
-            x_pred_traj[t_pred_traj_print_idx, :, :],
-            u_ref_traj[t_ref_traj_print_idx, :, :],
-            x_ref_traj[t_ref_traj_print_idx, :, :],
+            u_pred_traj[t_pred_traj_idx, :, :],
+            x_pred_traj[t_pred_traj_idx, :, :],
+            u_ref_traj[t_ref_traj_idx, :, :],
+            x_ref_traj[t_ref_traj_idx, :, :],
             N_tmpc,
             Q_dt,
             R_dt,
             P_dt,
         )
-    print(f"pobj_comp: {pobj_comp}")
+    # print(f"pobj_comp: {pobj_comp}")
 
     # Select data to plot
-    if t_to_plot == -1:
-        raise ValueError("t_to_plot must be a non-negative value")
-    else:
-        t_x_cur_plot_start_idx = np.abs(t_x_cur - t_to_plot).argmin()
-        t_x_cur_plot_end_idx = np.abs(
-            t_x_cur - np.round(t_to_plot + N_tmpc * ts_tmpc, time_precision)
-        ).argmin()
-        t_x_cur_est_plot_idx = np.abs(t_x_cur_est - t_to_plot).argmin()
-        t_ref_traj_plot_idx = np.abs(t_ref_traj - t_to_plot).argmin()
-        t_pred_traj_plot_idx = np.abs(t_pred_traj - t_to_plot).argmin()
+    if t == -1:
+        raise ValueError("t must be a non-negative value for plotting")
 
-    print(f"t_x_cur_plot_start_idx: {t_x_cur_plot_start_idx}")
-    print(f"t_x_cur_plot_end_idx: {t_x_cur_plot_end_idx}")
+    print(f"t_x_cur_start_idx: {t_x_cur_start_idx}")
+    print(f"t_x_cur_start: {t_x_cur[t_x_cur_start_idx]}")
+    print(f"t_x_cur_end_idx: {t_x_cur_end_idx}")
+    print(f"t_x_cur_end: {t_x_cur[t_x_cur_end_idx]}")
+    print(f"t_x_cur_est_idx: {t_x_cur_est_idx}")
+    print(f"t_x_cur_est: {t_x_cur_est[t_x_cur_est_idx]}")
+    print(f"t_ref_traj_idx: {t_ref_traj_idx}")
+    print(f"t_ref_traj: {t_ref_traj[t_ref_traj_idx]}")
+    print(f"t_pred_traj_idx: {t_pred_traj_idx}")
+    print(f"t_pred_traj: {t_pred_traj[t_pred_traj_idx]}")
+
+    # print(f"x_cur_est: {x_cur_est[t_x_cur_est_idx]}")
+    print(f"x_pred_traj: {x_pred_traj[t_pred_traj_idx, 0, :]}")
+    print(f"x_ref_traj: {x_ref_traj[t_ref_traj_idx, 0, :]}")
 
     # Create figure
     set_plt_properties()
@@ -340,14 +346,14 @@ if __name__ == "__main__":
     for k in range(N_tmpc + 1):
         tmpc_ref = Circle(
             (
-                x_ref_traj[t_ref_traj_plot_idx, k, 0],
-                x_ref_traj[t_ref_traj_plot_idx, k, 1],
+                x_ref_traj[t_ref_traj_idx, k, 0],
+                x_ref_traj[t_ref_traj_idx, k, 1],
             ),
             r_tmpc_ref,
             facecolor=c_tmpc_ref,
             alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, N_tmpc * ts_tmpc),
             zorder=2,
-            label="TMPC ref traj",
+            label="TMPC ref pos",
         )
         handles_tmpc_ref.append(ax.add_patch(tmpc_ref))
 
@@ -355,22 +361,22 @@ if __name__ == "__main__":
     handle_x0 = ax.add_patch(
         Circle(
             (
-                x_cur_est[t_x_cur_est_plot_idx, 0],
-                x_cur_est[t_x_cur_est_plot_idx, 1],
+                x_cur_est[t_x_cur_est_idx, 0],
+                x_cur_est[t_x_cur_est_idx, 1],
             ),
             r_x0,
             facecolor=c_x0,
             alpha=compute_alpha(alpha_min, alpha_max, 0, N_tmpc * ts_tmpc),
             zorder=4,
-            label="TMPC init state",
+            label="TMPC init pos",
         )
     )
     handles_tmpc_pred = []
     for k in range(1, N_tmpc + 1):
         tmpc_pred = Circle(
             (
-                x_pred_traj[t_pred_traj_plot_idx, k, 0],
-                x_pred_traj[t_pred_traj_plot_idx, k, 1],
+                x_pred_traj[t_pred_traj_idx, k, 0],
+                x_pred_traj[t_pred_traj_idx, k, 1],
             ),
             r_tmpc,
             facecolor=c_tmpc,
@@ -384,33 +390,34 @@ if __name__ == "__main__":
 
     # Add closed-loop state to plot
     handles_x = []
-    for t_x_cur_plot_idx in range(t_x_cur_plot_start_idx, t_x_cur_plot_end_idx + 1):
+    for t_x_cur_idx in range(t_x_cur_start_idx, t_x_cur_end_idx + 1):
         x = Circle(
-            (x_cur[t_x_cur_plot_idx, 0], x_cur[t_x_cur_plot_idx, 1]),
+            (x_cur[t_x_cur_idx, 0], x_cur[t_x_cur_idx, 1]),
             r_x,
             facecolor=c_x,
             alpha=compute_alpha(
                 alpha_min,
                 alpha_max,
-                (t_x_cur_plot_idx - t_x_cur_plot_start_idx) * ts_sim,
+                (t_x_cur_idx - t_x_cur_start_idx) * ts_sim,
                 N_tmpc * ts_tmpc,
             ),
             zorder=5,
-            label="Closed-loop state",
+            label="Closed-loop pos",
         )
         handles_x.append(ax.add_patch(x))
 
     # Add title, etc. to plot
     # ax.set_title(f"TMPC prediction", pad=props["titlepad"])
+    # t=2.5
     ax.set_xlim(-0.01, 0.01)
-    ax.set_ylim(0.025, 0.045)
-    # ax.set_xlim(-1.166667, 1.166667)
-    # ax.set_ylim(-0.5, 0.5)
-    # ax.set_xlim(-0.8, 2)
-    # ax.set_ylim(-0.6, 0.6)
-    # ax.set_xlim(0, 1.166666)
-    # ax.set_ylim(-0.5, 0)
-    # edge_val = 4
+    ax.set_ylim(-0.001, 0.021)
+    # t=3
+    # ax.set_xlim(-0.01, 0.01)
+    # ax.set_ylim(0.025, 0.045)
+    # t=6
+    # ax.set_xlim(-0.01, 0.01)
+    # ax.set_ylim(0.305, 0.325)
+    # edge_val = 0.001
     # ax.set_xlim(-edge_val, edge_val)
     # ax.set_ylim(-edge_val, edge_val)
     ax.set_xlabel("$p^x$ (m)")
