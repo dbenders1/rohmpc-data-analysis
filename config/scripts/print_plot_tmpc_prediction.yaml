@@ -6,7 +6,10 @@ data:
   t: 6
 
 print_settings:
-  print_pobj: True
+  print_pobj_comp: True
+  print_u_track_err: False # prints the control input tracking error (Q_dt=zeros,R_dt=eye,P_dt=zeros)
+  print_x_track_err: False # prints the state tracking error (Q_dt=eye,R_dt=zeros,P_dt=eye)
+  print_p_track_err: True # prints the position tracking error
 
 plot_settings:
   r_tmpc_ref: 0.0003

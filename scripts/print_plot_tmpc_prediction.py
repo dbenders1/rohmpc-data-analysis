@@ -15,6 +15,8 @@ from os import path
 from pathlib import Path
 
 FLOAT_TOL = 1e-6
+NU = 4
+NX = 12
 
 
 class Colors(Enum):
@@ -65,6 +67,21 @@ def compute_pobj(u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, Q_dt, R_dt
         @ (x_pred_traj[N, :] - x_ref_traj[N, :])
     )
     return pobj
+
+
+def compute_track_err(
+    u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, u_idc, x_idc
+):
+    Q_dt = np.zeros((NX, NX))
+    Q_dt[x_idc, x_idc] = 1
+    R_dt = np.zeros((NU, NU))
+    R_dt[u_idc, u_idc] = 1
+    P_dt = np.zeros((NX, NX))
+    P_dt[x_idc, x_idc] = 1
+    track_err = compute_pobj(
+        u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, Q_dt, R_dt, P_dt
+    )
+    return track_err
 
 
 def set_fig_properties():
@@ -166,7 +183,10 @@ if __name__ == "__main__":
     t = config["data"]["t"]
 
     print_settings = config["print_settings"]
-    print_pobj = print_settings["print_pobj"]
+    print_pobj_comp = print_settings["print_pobj_comp"]
+    print_u_track_err = print_settings["print_u_track_err"]
+    print_x_track_err = print_settings["print_x_track_err"]
+    print_p_track_err = print_settings["print_p_track_err"]
 
     plot_settings = config["plot_settings"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
@@ -300,38 +320,7 @@ if __name__ == "__main__":
         t_pred_traj_idx = np.abs(t_pred_traj - t).argmin()
         t_ref_traj_idx = np.abs(t_ref_traj - t).argmin()
 
-    # Compute objective values
-    if t_x_cur_est_idx < 0:
-        pobj_comp = np.zeros(n_tmpc)
-        for t_idx in range(n_tmpc):
-            pobj_comp[t_idx] = compute_pobj(
-                u_pred_traj[t_idx, :, :],
-                x_pred_traj[t_idx, :, :],
-                u_ref_traj[t_idx, :, :],
-                x_ref_traj[t_idx, :, :],
-                N_tmpc,
-                Q_dt,
-                R_dt,
-                P_dt,
-            )
-    else:
-        pobj_comp = compute_pobj(
-            u_pred_traj[t_pred_traj_idx, :, :],
-            x_pred_traj[t_pred_traj_idx, :, :],
-            u_ref_traj[t_ref_traj_idx, :, :],
-            x_ref_traj[t_ref_traj_idx, :, :],
-            N_tmpc,
-            Q_dt,
-            R_dt,
-            P_dt,
-        )
-    if print_pobj:
-        print(f"pobj_comp: {pobj_comp}")
-
-    # Select data to plot
-    if t == -1:
-        raise ValueError("t must be a non-negative value for plotting")
-
+    # Print times and indices
     print(f"t_x_cur_start_idx: {t_x_cur_start_idx}")
     print(f"t_x_cur_start: {t_x_cur[t_x_cur_start_idx]}")
     print(f"t_x_cur_end_idx: {t_x_cur_end_idx}")
@@ -343,9 +332,83 @@ if __name__ == "__main__":
     print(f"t_pred_traj_idx: {t_pred_traj_idx}")
     print(f"t_pred_traj: {t_pred_traj[t_pred_traj_idx]}")
 
+    # Print trajectory points
     # print(f"x_cur_est: {x_cur_est[t_x_cur_est_idx]}")
     print(f"x_pred_traj: {x_pred_traj[t_pred_traj_idx, 0, :]}")
-    print(f"x_ref_traj: {x_ref_traj[t_ref_traj_idx, 0, :]}")
+    # print(f"x_ref_traj: {x_ref_traj[t_ref_traj_idx, 0, :]}")
+
+    # Compute objective values
+    if print_pobj_comp:
+        if t_x_cur_est_idx < 0:
+            pobj_comp = np.zeros(n_tmpc)
+            for t_idx in range(n_tmpc):
+                pobj_comp[t_idx] = compute_pobj(
+                    u_pred_traj[t_idx, :, :],
+                    x_pred_traj[t_idx, :, :],
+                    u_ref_traj[t_idx, :, :],
+                    x_ref_traj[t_idx, :, :],
+                    N_tmpc,
+                    Q_dt,
+                    R_dt,
+                    P_dt,
+                )
+        else:
+            pobj_comp = compute_pobj(
+                u_pred_traj[t_pred_traj_idx, :, :],
+                x_pred_traj[t_pred_traj_idx, :, :],
+                u_ref_traj[t_ref_traj_idx, :, :],
+                x_ref_traj[t_ref_traj_idx, :, :],
+                N_tmpc,
+                Q_dt,
+                R_dt,
+                P_dt,
+            )
+        print(f"pobj_comp: {pobj_comp}")
+
+    # Compute position tracking error
+    print_track_err = print_u_track_err or print_x_track_err or print_p_track_err
+    if print_track_err:
+        u_idc = []
+        x_idc = []
+        u_track_err_str = ""
+        x_track_err_str = ""
+        if print_u_track_err:
+            u_idc = np.arange(NU)
+            u_track_err_str = "u"
+        if print_p_track_err:
+            x_idc = np.arange(3)
+            x_track_err_str = "p"
+        if print_x_track_err:
+            x_idc = np.arange(NX)
+            x_track_err_str = "x"
+        track_err_str = f"{u_track_err_str}{x_track_err_str}_track_err"
+        if t_x_cur_est_idx < 0:
+            err = np.zeros(n_tmpc)
+            for t_idx in range(n_tmpc):
+                err[t_idx] = compute_track_err(
+                    u_pred_traj[t_idx, :, :],
+                    x_pred_traj[t_idx, :, :],
+                    u_ref_traj[t_idx, :, :],
+                    x_ref_traj[t_idx, :, :],
+                    N_tmpc,
+                    u_idc,
+                    x_idc,
+                )
+        else:
+            err = compute_track_err(
+                u_pred_traj[t_pred_traj_idx, :, :],
+                x_pred_traj[t_pred_traj_idx, :, :],
+                u_ref_traj[t_ref_traj_idx, :, :],
+                x_ref_traj[t_ref_traj_idx, :, :],
+                N_tmpc,
+                u_idc,
+                x_idc,
+            )
+        print(f"{track_err_str}: {err}")
+
+    # Select data to plot
+    if t == -1:
+        raise ValueError("t must be a non-negative value for plotting")
 
     # Create figure
     set_plt_properties()
