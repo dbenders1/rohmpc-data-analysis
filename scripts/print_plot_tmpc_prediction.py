@@ -187,6 +187,7 @@ if __name__ == "__main__":
     print_u_track_err = print_settings["print_u_track_err"]
     print_x_track_err = print_settings["print_x_track_err"]
     print_p_track_err = print_settings["print_p_track_err"]
+    print_2d_p_track_err = print_settings["print_2d_p_track_err"]
 
     plot_settings = config["plot_settings"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
@@ -366,7 +367,12 @@ if __name__ == "__main__":
         print(f"pobj_comp: {pobj_comp}")
 
     # Compute position tracking error
-    print_track_err = print_u_track_err or print_x_track_err or print_p_track_err
+    print_track_err = (
+        print_u_track_err
+        or print_x_track_err
+        or print_p_track_err
+        or print_2d_p_track_err
+    )
     if print_track_err:
         u_idc = []
         x_idc = []
@@ -375,6 +381,9 @@ if __name__ == "__main__":
         if print_u_track_err:
             u_idc = np.arange(NU)
             u_track_err_str = "u"
+        if print_2d_p_track_err:
+            x_idc = np.arange(2)
+            x_track_err_str = "2d_p"
         if print_p_track_err:
             x_idc = np.arange(3)
             x_track_err_str = "p"

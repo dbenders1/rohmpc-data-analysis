@@ -9,7 +9,8 @@ print_settings:
   print_pobj_comp: True
   print_u_track_err: False # prints the control input tracking error (Q_dt=zeros,R_dt=eye,P_dt=zeros)
   print_x_track_err: False # prints the state tracking error (Q_dt=eye,R_dt=zeros,P_dt=eye)
-  print_p_track_err: True # prints the position tracking error
+  print_p_track_err: False # prints the 3D position tracking error (Q_dt=np.diag([1,1,1,0,...,0]),R_dt=zeros,P_dt=np.diag([1,1,1,0,...,0]))
+  print_2d_p_track_err: True # prints the 2D position tracking error (Q_dt=np.diag([1,1,0,...,0]),R_dt=zeros,P_dt=np.diag([1,1,0,...,0]))
 
 plot_settings:
   r_tmpc_ref: 0.0003
