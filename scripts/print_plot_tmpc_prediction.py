@@ -318,22 +318,22 @@ if __name__ == "__main__":
         t_pred_traj_idx = np.abs(t_pred_traj - t).argmin()
         t_ref_traj_idx = np.abs(t_ref_traj - t).argmin()
 
-    # Print times and indices
-    print(f"t_x_cur_start_idx: {t_x_cur_start_idx}")
-    print(f"t_x_cur_start: {t_x_cur[t_x_cur_start_idx]}")
-    print(f"t_x_cur_end_idx: {t_x_cur_end_idx}")
-    print(f"t_x_cur_end: {t_x_cur[t_x_cur_end_idx]}")
-    print(f"t_x_cur_est_idx: {t_x_cur_est_idx}")
-    print(f"t_x_cur_est: {t_x_cur_est[t_x_cur_est_idx]}")
-    print(f"t_ref_traj_idx: {t_ref_traj_idx}")
-    print(f"t_ref_traj: {t_ref_traj[t_ref_traj_idx]}")
-    print(f"t_pred_traj_idx: {t_pred_traj_idx}")
-    print(f"t_pred_traj: {t_pred_traj[t_pred_traj_idx]}")
+        # Print times and indices
+        print(f"t_x_cur_start_idx: {t_x_cur_start_idx}")
+        print(f"t_x_cur_start: {t_x_cur[t_x_cur_start_idx]}")
+        print(f"t_x_cur_end_idx: {t_x_cur_end_idx}")
+        print(f"t_x_cur_end: {t_x_cur[t_x_cur_end_idx]}")
+        print(f"t_x_cur_est_idx: {t_x_cur_est_idx}")
+        print(f"t_x_cur_est: {t_x_cur_est[t_x_cur_est_idx]}")
+        print(f"t_ref_traj_idx: {t_ref_traj_idx}")
+        print(f"t_ref_traj: {t_ref_traj[t_ref_traj_idx]}")
+        print(f"t_pred_traj_idx: {t_pred_traj_idx}")
+        print(f"t_pred_traj: {t_pred_traj[t_pred_traj_idx]}")
 
-    # Print trajectory points
-    # print(f"x_cur_est: {x_cur_est[t_x_cur_est_idx]}")
-    print(f"x_pred_traj: {x_pred_traj[t_pred_traj_idx, 0, :]}")
-    # print(f"x_ref_traj: {x_ref_traj[t_ref_traj_idx, 0, :]}")
+        # Print trajectory points
+        # print(f"x_cur_est: {x_cur_est[t_x_cur_est_idx]}")
+        print(f"x_pred_traj: {x_pred_traj[t_pred_traj_idx, 0, :]}")
+        # print(f"x_ref_traj: {x_ref_traj[t_ref_traj_idx, 0, :]}")
 
     # Compute objective values
     if print_pobj_comp:
