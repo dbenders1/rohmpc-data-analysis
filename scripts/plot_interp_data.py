@@ -68,9 +68,15 @@ if __name__ == "__main__":
     n_interp_states = interp_states.shape[0]
     ts_mpc = t[1] - t[0]
     ts_feedback = ts_mpc / n_interp_states
-    t_rk4_states = np.arange(time_to_plot, time_to_plot + ts_mpc * n_rk4_states, ts_mpc)
-    t_interp_states = np.arange(
-        time_to_plot, time_to_plot + ts_feedback * n_interp_states, ts_feedback
+    t_rk4_states = np.linspace(
+        time_to_plot,
+        time_to_plot + ts_mpc * (n_rk4_states - 1),
+        n_rk4_states,
+    )
+    t_interp_states = np.linspace(
+        time_to_plot,
+        time_to_plot + ts_feedback * (n_interp_states - 1),
+        n_interp_states,
     )
 
     # Create plot
