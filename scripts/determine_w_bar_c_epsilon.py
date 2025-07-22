@@ -35,7 +35,7 @@ if __name__ == "__main__":
         )
         exit(1)
     config_dir = f"{package_dir}/config"
-    config_path = f"{config_dir}/scripts/determine_w_bar_c.yaml"
+    config_path = f"{config_dir}/scripts/determine_w_bar_c_epsilon.yaml"
     data_dir = f"{package_dir}/data"
     data_sel_dir = f"{data_dir}/selected_data"
 
@@ -144,11 +144,18 @@ if __name__ == "__main__":
                     * rho_c
                     / (1 - math.exp(-rho_c * (k + 1) * dt_tmpc))
                 )
-
         w_bar_c = np.max(w_bar_c_all[:, 0])
         print(f"{ros_rec_json_name} - w_bar_c: {w_bar_c}")
 
-        # Create figure
+        # Determine epsilon at all time steps
+        epsilon_all = np.zeros(n_tmpc)
+        for t in range(n_tmpc):
+            x_err = x_cur[t, :] - x_cur_est[t, :]
+            epsilon_all[t] = np.sqrt(x_err.T @ P_delta @ x_err)
+        epsilon = np.max(epsilon_all)
+        print(f"{ros_rec_json_name} - epsilon: {epsilon}")
+
+        # Create w_bar_c figure
         helpers.set_plt_properties()
         props = helpers.set_fig_properties()
         fig, axes = plt.subplots(
@@ -169,5 +176,12 @@ if __name__ == "__main__":
             )
             axes[row_idx, col_idx].set_xlabel("Time (s)")
             axes[row_idx, col_idx].set_ylabel(f"Stage {stage_idx}")
+
+        # Create epsilon figure
+        fig, ax = plt.subplots()
+        fig.suptitle(f"{ros_rec_json_name} - computed epsilon over time")
+        ax.plot(t_x_cur_est, epsilon_all)
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Epsilon")
 
     plt.show()
