@@ -149,7 +149,8 @@ if __name__ == "__main__":
         # Determine epsilon at all time steps
         epsilon_all = np.zeros(n_tmpc)
         for t in range(n_tmpc):
-            x_err = x_cur[t, :] - x_cur_est[t, :]
+            t_x_cur_idx = np.abs(t_x_cur - t_x_cur_est[t]).argmin()
+            x_err = x_cur[t_x_cur_idx, :] - x_cur_est[t, :]
             epsilon_all[t] = np.sqrt(x_err.T @ P_delta @ x_err)
         epsilon = np.max(epsilon_all)
         print(f"{ros_rec_json_name} - epsilon: {epsilon}")
