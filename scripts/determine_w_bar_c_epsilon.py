@@ -165,6 +165,13 @@ if __name__ == "__main__":
         ax.set_xlabel("Time (s)")
         ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
 
+        # Create w_bar_c figure plotted in order
+        fig, ax = plt.subplots()
+        fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c in order")
+        ax.plot(np.arange(1, n_tmpc), sorted(w_bar_c_all))
+        ax.set_xlabel("Index")
+        ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
+
         # Create epsilon figure
         fig, ax = plt.subplots()
         fig.suptitle(f"{ros_rec_json_name} - computed epsilon over time")
