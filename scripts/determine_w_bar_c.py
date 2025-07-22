@@ -114,6 +114,8 @@ if __name__ == "__main__":
         t_pred_traj = t_pred_traj[:n_tmpc]
         u_pred_traj = u_pred_traj[:n_tmpc, :, :]
         x_pred_traj = x_pred_traj[:n_tmpc, :, :]
+        print(f"t start: {t_x_cur_est[0]}")
+        print(f"t end: {t_x_cur_est[-1]}")
 
         # Determine w_bar_c for all prediction stages at all time steps
         w_bar_c_all = np.zeros((n_tmpc - N_tmpc, N_tmpc))
