@@ -133,18 +133,17 @@ if __name__ == "__main__":
         print(f"t end: {t_x_cur_est[-1]}")
 
         # Determine w_bar_c for all prediction stages at all time steps
-        w_bar_c_all = np.zeros((n_tmpc - N_tmpc, N_tmpc))
-        for t in range(n_tmpc - N_tmpc):
-            for k in range(N_tmpc):
-                # t_x_cur_idx = np.abs(t_x_cur - t_x_cur_est[t + k + 1]).argmin()
-                # x_err = x_cur[t_x_cur_idx, :] - x_pred_traj[t, k + 1, :]
-                x_err = x_cur_est[t + k + 1, :] - x_pred_traj[t, k + 1, :]
-                w_bar_c_all[t, k] = (
-                    np.sqrt(x_err.T @ P_delta @ x_err)
-                    * rho_c
-                    / (1 - math.exp(-rho_c * (k + 1) * dt_tmpc))
-                )
-        w_bar_c = np.max(w_bar_c_all[:, 0])
+        w_bar_c_all = np.zeros((n_tmpc - 1))
+        for t in range(n_tmpc - 1):
+            # t_x_cur_idx = np.abs(t_x_cur - t_x_cur_est[t + 1]).argmin()
+            # x_err = x_cur[t_x_cur_idx, :] - x_pred_traj[t, 1, :]
+            x_err = x_cur_est[t + 1, :] - x_pred_traj[t, 1, :]
+            w_bar_c_all[t] = (
+                np.sqrt(x_err.T @ P_delta @ x_err)
+                * rho_c
+                / (1 - math.exp(-rho_c * dt_tmpc))
+            )
+        w_bar_c = np.max(w_bar_c_all)
         print(f"{ros_rec_json_name} - w_bar_c: {w_bar_c}")
 
         # Determine epsilon at all time steps
@@ -155,33 +154,22 @@ if __name__ == "__main__":
         epsilon = np.max(epsilon_all)
         print(f"{ros_rec_json_name} - epsilon: {epsilon}")
 
-        # Create w_bar_c figure
+        # Set plotting properties
         helpers.set_plt_properties()
         props = helpers.set_fig_properties()
-        fig, axes = plt.subplots(
-            n_rows_plot,
-            n_cols_plot,
-            num=f"{ros_rec_json_name} - computed w_bar_c per stage over time",
-        )
-        fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c per stage over time")
-        for ax_idx in range(n_rows_plot * n_cols_plot):
-            row_idx = ax_idx // n_cols_plot
-            col_idx = ax_idx % n_cols_plot
-            if plot_stage_idx_at_ax_idx[ax_idx] == None:
-                axes.flat[ax_idx].axis("off")
-                continue
-            stage_idx = plot_stage_idx_at_ax_idx[ax_idx]
-            axes[row_idx, col_idx].plot(
-                t_x_cur_est[: n_tmpc - N_tmpc], w_bar_c_all[:, stage_idx]
-            )
-            axes[row_idx, col_idx].set_xlabel("Time (s)")
-            axes[row_idx, col_idx].set_ylabel(f"Stage {stage_idx}")
+
+        # Create w_bar_c figure
+        fig, ax = plt.subplots()
+        fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c over time")
+        ax.plot(t_x_cur_est[: n_tmpc - 1], w_bar_c_all)
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
 
         # Create epsilon figure
         fig, ax = plt.subplots()
         fig.suptitle(f"{ros_rec_json_name} - computed epsilon over time")
         ax.plot(t_x_cur_est, epsilon_all)
         ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Epsilon")
+        ax.set_ylabel("$\epsilon$")
 
     plt.show()
