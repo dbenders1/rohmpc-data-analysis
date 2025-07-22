@@ -23,6 +23,9 @@ if [ ! -d "venv" ]; then
     echo "Installing dependencies from requirements.txt ..."
     pip install -r requirements.txt
 
+    echo "Installing local custom package from setup.py ..."
+    pip install -e .
+
     deactivate
     echo "Virtual environment created and all packages installed"
 else

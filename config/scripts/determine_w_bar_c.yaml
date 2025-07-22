@@ -1,0 +1,8 @@
+data:
+  runtime_json_name: 2025-07-21_18-28__ReferenceTrajectory_StaticPolyhedronConstraints_0
+  ros_rec_json_name: 2025-07-21_sim_dist_meas_noise_falcon_determine_w_bar_c_circle_r1_f0dot1_cw
+
+plot_settings:
+  n_rows: 3
+  n_cols: 4
+  plot_stage_idx_at_ax_idx: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, null, null]
