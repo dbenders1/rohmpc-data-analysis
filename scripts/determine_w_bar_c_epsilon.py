@@ -44,6 +44,7 @@ if __name__ == "__main__":
         config = yaml.load(file, Loader=yaml.FullLoader)
     runtime_json_names = config["data"]["runtime_json_names"]
     ros_rec_json_names = config["data"]["ros_rec_json_names"]
+    n_idx_ignore = config["data"]["n_idx_ignore"]
 
     plot_settings = config["plot_settings"]
     n_rows_plot = plot_settings["n_rows"]
@@ -143,6 +144,7 @@ if __name__ == "__main__":
                 * rho_c
                 / (1 - math.exp(-rho_c * dt_tmpc))
             )
+        w_bar_c_all = w_bar_c_all[n_idx_ignore:]
         w_bar_c = np.max(w_bar_c_all)
         print(f"{ros_rec_json_name} - w_bar_c: {w_bar_c}")
 
@@ -152,6 +154,7 @@ if __name__ == "__main__":
             t_x_cur_idx = np.abs(t_x_cur - t_x_cur_est[t]).argmin()
             x_err = x_cur[t_x_cur_idx, :] - x_cur_est[t, :]
             epsilon_all[t] = np.sqrt(x_err.T @ P_delta @ x_err)
+        epsilon_all = epsilon_all[n_idx_ignore:]
         epsilon = np.max(epsilon_all)
         print(f"{ros_rec_json_name} - epsilon: {epsilon}")
 
@@ -162,21 +165,21 @@ if __name__ == "__main__":
         # Create w_bar_c figure
         fig, ax = plt.subplots()
         fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c over time")
-        ax.plot(t_x_cur_est[1:], w_bar_c_all)
+        ax.plot(t_x_cur_est[n_idx_ignore + 1 :], w_bar_c_all)
         ax.set_xlabel("Time (s)")
         ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
 
         # Create w_bar_c figure plotted in order
         fig, ax = plt.subplots()
         fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c in order")
-        ax.plot(np.arange(1, n_tmpc), sorted(w_bar_c_all))
+        ax.plot(np.arange(n_idx_ignore + 1, n_tmpc), sorted(w_bar_c_all))
         ax.set_xlabel("Index")
         ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
 
         # Create epsilon figure
         fig, ax = plt.subplots()
         fig.suptitle(f"{ros_rec_json_name} - computed epsilon over time")
-        ax.plot(t_x_cur_est, epsilon_all)
+        ax.plot(t_x_cur_est[n_idx_ignore:], epsilon_all)
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("$\epsilon$")
 

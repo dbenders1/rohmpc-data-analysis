@@ -25,6 +25,7 @@ data:
     [
       2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_circle_r1_f0dot1_cw_Lopt,
     ]
+  n_idx_ignore: 200
 
 plot_settings:
   n_rows: 3
