@@ -145,7 +145,7 @@ if __name__ == "__main__":
                     / (1 - math.exp(-rho_c * (k + 1) * dt_tmpc))
                 )
 
-        w_bar_c = np.max(w_bar_c_all)
+        w_bar_c = np.max(w_bar_c_all[:, 0])
         print(f"{ros_rec_json_name} - w_bar_c: {w_bar_c}")
 
         # Create figure
