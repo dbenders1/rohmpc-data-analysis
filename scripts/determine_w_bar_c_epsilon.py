@@ -161,7 +161,7 @@ if __name__ == "__main__":
         # Create w_bar_c figure
         fig, ax = plt.subplots()
         fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c over time")
-        ax.plot(t_x_cur_est[: n_tmpc - 1], w_bar_c_all)
+        ax.plot(t_x_cur_est[1:], w_bar_c_all)
         ax.set_xlabel("Time (s)")
         ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
 
