@@ -42,100 +42,113 @@ if __name__ == "__main__":
     # Read configuration parameters
     with open(config_path) as file:
         config = yaml.load(file, Loader=yaml.FullLoader)
-    runtime_json_name = config["data"]["runtime_json_name"]
-    ros_rec_json_name = config["data"]["ros_rec_json_name"]
+    runtime_json_names = config["data"]["runtime_json_names"]
+    ros_rec_json_names = config["data"]["ros_rec_json_names"]
 
     plot_settings = config["plot_settings"]
     n_rows_plot = plot_settings["n_rows"]
     n_cols_plot = plot_settings["n_cols"]
     plot_stage_idx_at_ax_idx = plot_settings["plot_stage_idx_at_ax_idx"]
 
-    # Read ROS runtime json data
-    runtime_json_path = f"{runtime_json_dir}/{runtime_json_name}.json"
-    log.warning(f"Selected runtime json file: {runtime_json_path}")
-    if not path.exists(runtime_json_path):
-        raise FileNotFoundError(f"Runtime json path {runtime_json_path} not found")
-    with open(runtime_json_path, "r") as file:
-        runtime_data = json.load(file)
-
-    runtime_static_data = runtime_data["static_data"]
-    stepsize_tmpc = runtime_static_data["stepsize"]
-    steps_tmpc = runtime_static_data["steps"]
-    P_delta = np.array(runtime_static_data["P_delta"])
-    rho_c = np.array(runtime_static_data["rho_c"])
-
-    # Read ROS recording json data
-    ros_rec_json_path = f"{ros_rec_json_dir}/{ros_rec_json_name}.json"
-    log.warning(f"Selected ROS recording json file: {ros_rec_json_path}")
-    if not path.exists(ros_rec_json_path):
-        raise FileNotFoundError(
-            f"ROS recording json path {ros_rec_json_path} not found"
+    # Print warning if the number of runtime and ros recording json names do not match
+    n_runtime_json_names = len(runtime_json_names)
+    n_ros_rec_json_names = len(ros_rec_json_names)
+    if n_runtime_json_names != n_ros_rec_json_names:
+        raise ValueError(
+            f"Number of runtime_json_names ({n_runtime_json_names}) and ros_rec_json_names ({n_ros_rec_json_names}) must match"
         )
-    with open(ros_rec_json_path, "r") as file:
-        ros_rec_data = json.load(file)
 
-    time_precision = ros_rec_data["time_precision"]
+    # Iterate over all runtime and ros recording json names
+    for file_idx in range(n_runtime_json_names):
+        runtime_json_name = runtime_json_names[file_idx]
+        ros_rec_json_name = ros_rec_json_names[file_idx]
 
-    data_x_cur_est = ros_rec_data["/mpc/rec/current_state"]
-    t_x_cur_est = np.array(data_x_cur_est["t"])
-    x_cur_est = np.array(data_x_cur_est["current_state"])
+        # Read ROS runtime json data
+        runtime_json_path = f"{runtime_json_dir}/{runtime_json_name}.json"
+        log.warning(f"Selected runtime json file: {runtime_json_path}")
+        if not path.exists(runtime_json_path):
+            raise FileNotFoundError(f"Runtime json path {runtime_json_path} not found")
+        with open(runtime_json_path, "r") as file:
+            runtime_data = json.load(file)
 
-    data_pred_traj = ros_rec_data["/mpc/rec/predicted_trajectory/0"]
-    t_pred_traj = np.array(data_pred_traj["t"])
-    u_pred_traj = np.array(data_pred_traj["u_pred"])
-    x_pred_traj = np.array(data_pred_traj["x_pred"])
+        runtime_static_data = runtime_data["static_data"]
+        stepsize_tmpc = runtime_static_data["stepsize"]
+        steps_tmpc = runtime_static_data["steps"]
+        P_delta = np.array(runtime_static_data["P_delta"])
+        rho_c = np.array(runtime_static_data["rho_c"])
 
-    # Set times to a specific precision
-    t_x_cur_est = np.round(t_x_cur_est, time_precision)
-    t_pred_traj = np.round(t_pred_traj, time_precision)
-
-    # Determine various parameters of runtime data
-    n_tmpc = min(len(t_x_cur_est), len(t_pred_traj))
-    N_tmpc = x_pred_traj.shape[1] - 1
-    dt_tmpc = steps_tmpc * stepsize_tmpc
-
-    # Shrink data to the minimum length
-    t_x_cur_est = t_x_cur_est[:n_tmpc]
-    x_cur_est = x_cur_est[:n_tmpc, :]
-    x_cur_est = x_cur_est[:n_tmpc, :]
-    t_pred_traj = t_pred_traj[:n_tmpc]
-    u_pred_traj = u_pred_traj[:n_tmpc, :, :]
-    x_pred_traj = x_pred_traj[:n_tmpc, :, :]
-
-    # Determine w_bar_c for all prediction stages at all time steps
-    w_bar_c_all = np.zeros((n_tmpc - N_tmpc, N_tmpc))
-    for t in range(n_tmpc - N_tmpc):
-        for k in range(N_tmpc):
-            x_err = x_cur_est[t + k + 1, :] - x_pred_traj[t, k + 1, :]
-            w_bar_c_all[t, k] = (
-                np.sqrt(x_err.T @ P_delta @ x_err)
-                * rho_c
-                / (1 - math.exp(-rho_c * (k + 1) * dt_tmpc))
+        # Read ROS recording json data
+        ros_rec_json_path = f"{ros_rec_json_dir}/{ros_rec_json_name}.json"
+        log.warning(f"Selected ROS recording json file: {ros_rec_json_path}")
+        if not path.exists(ros_rec_json_path):
+            raise FileNotFoundError(
+                f"ROS recording json path {ros_rec_json_path} not found"
             )
+        with open(ros_rec_json_path, "r") as file:
+            ros_rec_data = json.load(file)
 
-    w_bar_c = np.max(w_bar_c_all)
-    print(f"w_bar_c: {w_bar_c}")
+        time_precision = ros_rec_data["time_precision"]
 
-    # Create figure
-    helpers.set_plt_properties()
-    props = helpers.set_fig_properties()
-    fig, axes = plt.subplots(
-        n_rows_plot,
-        n_cols_plot,
-        num=f"{ros_rec_json_name} - computed w_bar_c per stage over time",
-    )
-    fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c per stage over time")
-    for ax_idx in range(n_rows_plot * n_cols_plot):
-        row_idx = ax_idx // n_cols_plot
-        col_idx = ax_idx % n_cols_plot
-        if plot_stage_idx_at_ax_idx[ax_idx] == None:
-            axes.flat[ax_idx].axis("off")
-            continue
-        stage_idx = plot_stage_idx_at_ax_idx[ax_idx]
-        axes[row_idx, col_idx].plot(
-            t_x_cur_est[: n_tmpc - N_tmpc], w_bar_c_all[:, stage_idx]
+        data_x_cur_est = ros_rec_data["/mpc/rec/current_state"]
+        t_x_cur_est = np.array(data_x_cur_est["t"])
+        x_cur_est = np.array(data_x_cur_est["current_state"])
+
+        data_pred_traj = ros_rec_data["/mpc/rec/predicted_trajectory/0"]
+        t_pred_traj = np.array(data_pred_traj["t"])
+        u_pred_traj = np.array(data_pred_traj["u_pred"])
+        x_pred_traj = np.array(data_pred_traj["x_pred"])
+
+        # Set times to a specific precision
+        t_x_cur_est = np.round(t_x_cur_est, time_precision)
+        t_pred_traj = np.round(t_pred_traj, time_precision)
+
+        # Determine various parameters of runtime data
+        n_tmpc = min(len(t_x_cur_est), len(t_pred_traj))
+        N_tmpc = x_pred_traj.shape[1] - 1
+        dt_tmpc = steps_tmpc * stepsize_tmpc
+
+        # Shrink data to the minimum length
+        t_x_cur_est = t_x_cur_est[:n_tmpc]
+        x_cur_est = x_cur_est[:n_tmpc, :]
+        x_cur_est = x_cur_est[:n_tmpc, :]
+        t_pred_traj = t_pred_traj[:n_tmpc]
+        u_pred_traj = u_pred_traj[:n_tmpc, :, :]
+        x_pred_traj = x_pred_traj[:n_tmpc, :, :]
+
+        # Determine w_bar_c for all prediction stages at all time steps
+        w_bar_c_all = np.zeros((n_tmpc - N_tmpc, N_tmpc))
+        for t in range(n_tmpc - N_tmpc):
+            for k in range(N_tmpc):
+                x_err = x_cur_est[t + k + 1, :] - x_pred_traj[t, k + 1, :]
+                w_bar_c_all[t, k] = (
+                    np.sqrt(x_err.T @ P_delta @ x_err)
+                    * rho_c
+                    / (1 - math.exp(-rho_c * (k + 1) * dt_tmpc))
+                )
+
+        w_bar_c = np.max(w_bar_c_all)
+        print(f"{ros_rec_json_name} - w_bar_c: {w_bar_c}")
+
+        # Create figure
+        helpers.set_plt_properties()
+        props = helpers.set_fig_properties()
+        fig, axes = plt.subplots(
+            n_rows_plot,
+            n_cols_plot,
+            num=f"{ros_rec_json_name} - computed w_bar_c per stage over time",
         )
-        axes[row_idx, col_idx].set_xlabel("Time (s)")
-        axes[row_idx, col_idx].set_ylabel(f"Stage {stage_idx}")
+        fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c per stage over time")
+        for ax_idx in range(n_rows_plot * n_cols_plot):
+            row_idx = ax_idx // n_cols_plot
+            col_idx = ax_idx % n_cols_plot
+            if plot_stage_idx_at_ax_idx[ax_idx] == None:
+                axes.flat[ax_idx].axis("off")
+                continue
+            stage_idx = plot_stage_idx_at_ax_idx[ax_idx]
+            axes[row_idx, col_idx].plot(
+                t_x_cur_est[: n_tmpc - N_tmpc], w_bar_c_all[:, stage_idx]
+            )
+            axes[row_idx, col_idx].set_xlabel("Time (s)")
+            axes[row_idx, col_idx].set_ylabel(f"Stage {stage_idx}")
 
     plt.show()
