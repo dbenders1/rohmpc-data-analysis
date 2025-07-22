@@ -46,6 +46,12 @@ if __name__ == "__main__":
     ros_rec_json_names = config["data"]["ros_rec_json_names"]
     n_idx_ignore = config["data"]["n_idx_ignore"]
 
+    do_plot = config["do_plot"]
+    do_plot_w_bar_c_time = do_plot["w_bar_c_time"]
+    do_plot_w_bar_c_sorted = do_plot["w_bar_c_sorted"]
+    do_plot_epsilon_time = do_plot["epsilon_time"]
+    do_plot_epsilon_sorted = do_plot["epsilon_sorted"]
+
     plot_settings = config["plot_settings"]
     n_rows_plot = plot_settings["n_rows"]
     n_cols_plot = plot_settings["n_cols"]
@@ -163,31 +169,35 @@ if __name__ == "__main__":
         props = helpers.set_fig_properties()
 
         # Create w_bar_c figure
-        fig, ax = plt.subplots()
-        fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c over time")
-        ax.plot(t_x_cur_est[n_idx_ignore + 1 :], w_bar_c_all)
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
+        if do_plot_w_bar_c_time:
+            fig, ax = plt.subplots()
+            fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c over time")
+            ax.plot(t_x_cur_est[n_idx_ignore + 1 :], w_bar_c_all)
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
 
         # Create w_bar_c sorted figure
-        fig, ax = plt.subplots()
-        fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c sorted")
-        ax.plot(np.arange(n_idx_ignore + 1, n_tmpc), sorted(w_bar_c_all))
-        ax.set_xlabel("Index")
-        ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
+        if do_plot_w_bar_c_sorted:
+            fig, ax = plt.subplots()
+            fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c sorted")
+            ax.plot(np.arange(n_idx_ignore + 1, n_tmpc), sorted(w_bar_c_all))
+            ax.set_xlabel("Index")
+            ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
 
         # Create epsilon figure
-        fig, ax = plt.subplots()
-        fig.suptitle(f"{ros_rec_json_name} - computed epsilon over time")
-        ax.plot(t_x_cur_est[n_idx_ignore:], epsilon_all)
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("$\epsilon$")
+        if do_plot_epsilon_time:
+            fig, ax = plt.subplots()
+            fig.suptitle(f"{ros_rec_json_name} - computed epsilon over time")
+            ax.plot(t_x_cur_est[n_idx_ignore:], epsilon_all)
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel("$\epsilon$")
 
         # Create epsilon sorted figure
-        fig, ax = plt.subplots()
-        fig.suptitle(f"{ros_rec_json_name} - computed epsilon sorted")
-        ax.plot(np.arange(n_idx_ignore, n_tmpc), sorted(epsilon_all))
-        ax.set_xlabel("Index")
-        ax.set_ylabel("$\epsilon$")
+        if do_plot_epsilon_sorted:
+            fig, ax = plt.subplots()
+            fig.suptitle(f"{ros_rec_json_name} - computed epsilon sorted")
+            ax.plot(np.arange(n_idx_ignore, n_tmpc), sorted(epsilon_all))
+            ax.set_xlabel("Index")
+            ax.set_ylabel("$\epsilon$")
 
     plt.show()

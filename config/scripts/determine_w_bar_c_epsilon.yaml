@@ -27,6 +27,12 @@ data:
     ]
   n_idx_ignore: 200
 
+do_plot:
+  w_bar_c_time: false
+  w_bar_c_sorted: true
+  epsilon_time: false
+  epsilon_sorted: true
+
 plot_settings:
   n_rows: 3
   n_cols: 4
