@@ -169,9 +169,9 @@ if __name__ == "__main__":
         ax.set_xlabel("Time (s)")
         ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
 
-        # Create w_bar_c figure plotted in order
+        # Create w_bar_c sorted figure
         fig, ax = plt.subplots()
-        fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c in order")
+        fig.suptitle(f"{ros_rec_json_name} - computed w_bar_c sorted")
         ax.plot(np.arange(n_idx_ignore + 1, n_tmpc), sorted(w_bar_c_all))
         ax.set_xlabel("Index")
         ax.set_ylabel(r"$\bar{w}^\mathrm{c}$")
@@ -181,6 +181,13 @@ if __name__ == "__main__":
         fig.suptitle(f"{ros_rec_json_name} - computed epsilon over time")
         ax.plot(t_x_cur_est[n_idx_ignore:], epsilon_all)
         ax.set_xlabel("Time (s)")
+        ax.set_ylabel("$\epsilon$")
+
+        # Create epsilon sorted figure
+        fig, ax = plt.subplots()
+        fig.suptitle(f"{ros_rec_json_name} - computed epsilon sorted")
+        ax.plot(np.arange(n_idx_ignore, n_tmpc), sorted(epsilon_all))
+        ax.set_xlabel("Index")
         ax.set_ylabel("$\epsilon$")
 
     plt.show()
