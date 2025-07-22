@@ -89,6 +89,10 @@ if __name__ == "__main__":
 
         time_precision = ros_rec_data["time_precision"]
 
+        data_x_cur = ros_rec_data["/falcon/ground_truth/odometry"]
+        t_x_cur = np.array(data_x_cur["t"])
+        x_cur = np.array(data_x_cur["x"])
+
         data_x_cur_est = ros_rec_data["/mpc/rec/current_state"]
         t_x_cur_est = np.array(data_x_cur_est["t"])
         x_cur_est = np.array(data_x_cur_est["current_state"])
@@ -107,13 +111,24 @@ if __name__ == "__main__":
         N_tmpc = x_pred_traj.shape[1] - 1
         dt_tmpc = steps_tmpc * stepsize_tmpc
 
-        # Shrink data to the minimum length
+        # Align all data recorded in mpc
         t_x_cur_est = t_x_cur_est[:n_tmpc]
         x_cur_est = x_cur_est[:n_tmpc, :]
         x_cur_est = x_cur_est[:n_tmpc, :]
         t_pred_traj = t_pred_traj[:n_tmpc]
         u_pred_traj = u_pred_traj[:n_tmpc, :, :]
         x_pred_traj = x_pred_traj[:n_tmpc, :, :]
+
+        # Ensure that all times are aligned
+        if t_x_cur_est[-1] > t_x_cur[-1]:
+            log.warning(
+                "The estimated state has a recording after the ground truth state. Shrinking t_x_cur_est, x_cur_est, t_pred_traj, u_pred_traj, and x_pred_traj to the last time of t_x_cur"
+            )
+            t_x_cur_est = t_x_cur_est[t_x_cur_est <= t_x_cur[-1]]
+            x_cur_est = x_cur_est[: len(t_x_cur_est)]
+            t_pred_traj = t_pred_traj[t_pred_traj <= t_x_cur[-1]]
+            u_pred_traj = u_pred_traj[: len(t_pred_traj)]
+            x_pred_traj = x_pred_traj[: len(t_pred_traj)]
         print(f"t start: {t_x_cur_est[0]}")
         print(f"t end: {t_x_cur_est[-1]}")
 
@@ -121,6 +136,8 @@ if __name__ == "__main__":
         w_bar_c_all = np.zeros((n_tmpc - N_tmpc, N_tmpc))
         for t in range(n_tmpc - N_tmpc):
             for k in range(N_tmpc):
+                # t_x_cur_idx = np.abs(t_x_cur - t_x_cur_est[t + k + 1]).argmin()
+                # x_err = x_cur[t_x_cur_idx, :] - x_pred_traj[t, k + 1, :]
                 x_err = x_cur_est[t + k + 1, :] - x_pred_traj[t, k + 1, :]
                 w_bar_c_all[t, k] = (
                     np.sqrt(x_err.T @ P_delta @ x_err)
