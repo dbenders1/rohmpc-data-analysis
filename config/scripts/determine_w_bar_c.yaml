@@ -1,17 +1,29 @@
 data:
+  # runtime_json_names:
+  #   [
+  #     2025-07-22_05-47__ReferenceTrajectory_StaticPolyhedronConstraints_0,
+  #     2025-07-22_06-03__ReferenceTrajectory_StaticPolyhedronConstraints_0,
+  #     2025-07-22_06-05__ReferenceTrajectory_StaticPolyhedronConstraints_0,
+  #     2025-07-22_06-08__ReferenceTrajectory_StaticPolyhedronConstraints_0,
+  #   ]
+  # ros_rec_json_names:
+  #   [
+  #     2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_circle_r1_f0dot1_cw,
+  #     2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_circle_r1_f0dot1_ccw,
+  #     2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_lemniscate_r1_f0dot1_cw,
+  #     2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_lemniscate_r1_f0dot1_ccw,
+  #   ]
+  # runtime_json_names:
+  #   [2025-07-22_07-05__ReferenceTrajectory_StaticPolyhedronConstraints_0]
+  # ros_rec_json_names:
+  #   [
+  #     2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_circle_r1_f0dot1_cw_l100,
+  #   ]
   runtime_json_names:
-    [
-      2025-07-22_05-47__ReferenceTrajectory_StaticPolyhedronConstraints_0,
-      2025-07-22_06-03__ReferenceTrajectory_StaticPolyhedronConstraints_0,
-      2025-07-22_06-05__ReferenceTrajectory_StaticPolyhedronConstraints_0,
-      2025-07-22_06-08__ReferenceTrajectory_StaticPolyhedronConstraints_0,
-    ]
+    [2025-07-22_09-11__ReferenceTrajectory_StaticPolyhedronConstraints_0]
   ros_rec_json_names:
     [
-      2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_circle_r1_f0dot1_cw,
-      2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_circle_r1_f0dot1_ccw,
-      2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_lemniscate_r1_f0dot1_cw,
-      2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_lemniscate_r1_f0dot1_ccw,
+      2025-07-22_sim_dist_meas_noise_falcon_determine_w_bar_c_circle_r1_f0dot1_cw_Lopt,
     ]
 
 plot_settings:
