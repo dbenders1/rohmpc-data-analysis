@@ -13,6 +13,7 @@ from matplotlib.legend_handler import HandlerPatch
 from matplotlib.patches import Circle, Ellipse
 from os import path
 from pathlib import Path
+from rmpc_data_analysis import helpers
 
 FLOAT_TOL = 1e-6
 NU = 4
@@ -82,35 +83,6 @@ def compute_track_err(
         u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, Q_dt, R_dt, P_dt
     )
     return track_err
-
-
-def set_fig_properties():
-    props = dict()
-    props["titlepad"] = 4
-    props["tickpad"] = 1
-    props["xlabelpad"] = 0
-    props["ylabelpad"] = 1
-    props["zlabelpad"] = 0
-    props["textsize"] = plt.rcParams["xtick.labelsize"]
-    return props
-
-
-def set_plt_properties():
-    # Plot settings
-    fontsize = 10
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = ["Times New Roman"]
-    plt.rcParams["text.usetex"] = True
-    plt.rcParams["text.latex.preamble"] = r"\usepackage{bm}"
-    plt.rcParams["font.size"] = fontsize
-    plt.rcParams["axes.labelsize"] = fontsize - 2
-    plt.rcParams["axes.titlesize"] = fontsize
-    plt.rcParams["xtick.labelsize"] = fontsize - 4
-    plt.rcParams["ytick.labelsize"] = fontsize - 4
-    plt.rcParams["legend.fontsize"] = fontsize - 4
-    # Set dpi for saving figures
-    plt.rcParams["savefig.dpi"] = 300
-    plt.rcParams["figure.dpi"] = 300
 
 
 np.set_printoptions(threshold=np.inf)
@@ -412,8 +384,8 @@ if __name__ == "__main__":
         raise ValueError("t must be a non-negative value for plotting")
 
     # Create figure
-    set_plt_properties()
-    props = set_fig_properties()
+    helpers.set_plt_properties()
+    props = helpers.set_fig_properties()
     fig, ax = plt.subplots()
 
     # Add TMPC reference trajectory to plot
