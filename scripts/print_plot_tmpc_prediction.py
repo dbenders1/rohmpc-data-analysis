@@ -245,7 +245,6 @@ if __name__ == "__main__":
     ts_sim = np.round(t_x_cur[1] - t_x_cur[0], time_precision)
     Q_dt = Q * dt_tmpc
     R_dt = R * dt_tmpc
-    P_dt = P * dt_tmpc
     print(f"n_tmpc: {n_tmpc}, N_tmpc: {N_tmpc}, ts_tmpc: {ts_tmpc}, ts_sim: {ts_sim}")
 
     # Check if the estimated state overlaps with the ground truth state
@@ -320,7 +319,7 @@ if __name__ == "__main__":
                     N_tmpc,
                     Q_dt,
                     R_dt,
-                    P_dt,
+                    P,
                 )
         else:
             pobj_comp = compute_pobj(
@@ -331,7 +330,7 @@ if __name__ == "__main__":
                 N_tmpc,
                 Q_dt,
                 R_dt,
-                P_dt,
+                P,
             )
         print(f"pobj_comp: {pobj_comp}")
 
