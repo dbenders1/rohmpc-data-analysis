@@ -10,7 +10,7 @@ import numpy as np
 
 from enum import Enum
 from matplotlib.legend_handler import HandlerPatch
-from matplotlib.patches import Circle, Ellipse
+from matplotlib.patches import Circle, Ellipse, Polygon
 from os import path
 from pathlib import Path
 from rmpc_data_analysis import helpers
@@ -164,6 +164,7 @@ if __name__ == "__main__":
     r_x0 = plot_settings["r_x0"]
     r_x = plot_settings["r_x"]
 
+    c_obs_inflated = Colors.GREY.value
     c_tmpc_ref = mcolors.CSS4_COLORS["red"]
     c_tmpc = Colors.ORANGE.value
     c_x0 = Colors.PURPLE.value
@@ -181,11 +182,12 @@ if __name__ == "__main__":
         runtime_data = json.load(file)
 
     runtime_static_data = runtime_data["static_data"]
-    stepsize_tmpc = runtime_static_data["stepsize"]
-    steps_tmpc = runtime_static_data["steps"]
     Q = np.array(runtime_static_data["Q"])
     R = np.array(runtime_static_data["R"])
     P = np.array(runtime_static_data["P"])
+    robot_radius = runtime_static_data["robot_radius"]
+    stepsize_tmpc = runtime_static_data["stepsize"]
+    steps_tmpc = runtime_static_data["steps"]
 
     # Read ROS recording json data
     ros_rec_json_path = f"{ros_rec_json_dir}/{ros_rec_json_name}.json"
@@ -198,6 +200,19 @@ if __name__ == "__main__":
         ros_rec_data = json.load(file)
 
     time_precision = ros_rec_data["time_precision"]
+
+    obs_len = 0.6
+    obs_dim = np.array([2, 1]) * obs_len
+    data_obs_0 = ros_rec_data["/grid/obs/rec/rectangle2x1_0"]
+    obs_0_p = np.array(data_obs_0["p"])
+    obs_0_eul = np.array(data_obs_0["eul"])
+    obs_0 = {"p": obs_0_p, "eul": obs_0_eul, "dim": obs_dim}
+
+    data_obs_1 = ros_rec_data["/grid/obs/rec/rectangle2x1_1"]
+    obs_1_p = np.array(data_obs_1["p"])
+    obs_1_eul = np.array(data_obs_1["eul"])
+    obs_1 = {"p": obs_1_p, "eul": obs_1_eul, "dim": obs_dim}
+    obs_list = [obs_0, obs_1]
 
     data_x_cur = ros_rec_data["/falcon/ground_truth/odometry"]
     t_x_cur = np.array(data_x_cur["t"])
@@ -222,6 +237,9 @@ if __name__ == "__main__":
     x_pred_traj = np.array(data_pred_traj["x_pred"])
     print(f"u_pred_traj_.shape: {u_pred_traj.shape}")
     print(f"x_pred_traj_.shape: {x_pred_traj.shape}")
+
+    # Computed vertices of obstacle and vertices required to create inflated rectangular obstacles
+    obs_verts = helpers.compute_inflated_obstacle_vertices(obs_list, robot_radius)
 
     # Set times to a specific precision
     t_x_cur = np.round(t_x_cur, time_precision)
@@ -387,6 +405,40 @@ if __name__ == "__main__":
     props = helpers.set_fig_properties()
     fig, ax = plt.subplots()
 
+    # Add obstacles to plot
+    handles_obs = []
+    for obs_idx, verts in enumerate(obs_verts):
+        if obs_idx == 0:
+            obs_polygon = Polygon(
+                verts["orig"],
+                closed=True,
+                edgecolor="black",
+                facecolor="black",
+                label="Obstacle",
+            )
+        else:
+            obs_polygon = Polygon(
+                verts["orig"], closed=True, edgecolor="black", facecolor="black"
+            )
+        handles_obs.append(ax.add_patch(obs_polygon))
+        obs_polygon_long = Polygon(
+            verts["long"], closed=True, color=c_obs_inflated, zorder=0
+        )
+        handles_obs.append(ax.add_patch(obs_polygon_long))
+        obs_polygon_wide = Polygon(
+            verts["wide"], closed=True, color=c_obs_inflated, zorder=0
+        )
+        handles_obs.append(ax.add_patch(obs_polygon_wide))
+        for i in range(4):
+            obs_polygon_circle = Circle(
+                verts["orig"][i, :],
+                robot_radius,
+                color=c_obs_inflated,
+                fill=True,
+                zorder=0,
+            )
+            handles_obs.append(ax.add_patch(obs_polygon_circle))
+
     # Add TMPC reference trajectory to plot
     handles_tmpc_ref = []
     for k in range(N_tmpc + 1):
@@ -432,8 +484,6 @@ if __name__ == "__main__":
         )
         handles_tmpc_pred.append(ax.add_patch(tmpc_pred))
 
-    # TODO: add increasing tube size to plot
-
     # Add closed-loop state to plot
     handles_x = []
     for t_x_cur_idx in range(t_x_cur_start_idx, t_x_cur_end_idx + 1):
@@ -454,14 +504,14 @@ if __name__ == "__main__":
 
     # Add title, etc. to plot
     # ax.set_title(f"TMPC prediction", pad=props["titlepad"])
-    xy_diff = 0.01
-    x_mid = x_pred_traj[t_pred_traj_idx, int(N_tmpc / 2), 0]
-    y_mid = x_pred_traj[t_pred_traj_idx, int(N_tmpc / 2), 1]
-    ax.set_xlim(x_mid - xy_diff, x_mid + xy_diff)
-    ax.set_ylim(y_mid - xy_diff, y_mid + xy_diff)
-    # edge_val = 0.001
-    # ax.set_xlim(-edge_val, edge_val)
-    # ax.set_ylim(-edge_val, edge_val)
+    # xy_diff = 0.01
+    # x_mid = x_pred_traj[t_pred_traj_idx, int(N_tmpc / 2), 0]
+    # y_mid = x_pred_traj[t_pred_traj_idx, int(N_tmpc / 2), 1]
+    # ax.set_xlim(x_mid - xy_diff, x_mid + xy_diff)
+    # ax.set_ylim(y_mid - xy_diff, y_mid + xy_diff)
+    edge_val = 2
+    ax.set_xlim(-edge_val, edge_val)
+    ax.set_ylim(-edge_val, edge_val)
     ax.set_xlabel("$p^x$ (m)")
     ax.set_ylabel("$p^y$ (m)")
     ax.xaxis.labelpad = props["xlabelpad"]
