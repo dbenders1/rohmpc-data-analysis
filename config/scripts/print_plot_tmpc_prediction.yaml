@@ -20,7 +20,9 @@ print_settings:
 
 plot_settings:
   t: [3, 5]
-  k: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  k_ref: [0]
+  k_pred: [0]
+  t_div_tube: 5
   r_tmpc_ref: 0.0003
   r_tmpc: 0.0002
   r_x0: 0.0002

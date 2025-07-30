@@ -161,6 +161,9 @@ if __name__ == "__main__":
 
     plot_settings = config["plot_settings"]
     t_plot = plot_settings["t"]
+    k_ref = plot_settings["k_ref"]
+    k_pred = plot_settings["k_pred"]
+    t_div_tube = plot_settings["t_div_tube"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
     r_tmpc = plot_settings["r_tmpc"]
     r_x0 = plot_settings["r_x0"]
@@ -252,13 +255,19 @@ if __name__ == "__main__":
     Q_dt = Q * dt_tmpc
     R_dt = R * dt_tmpc
 
-    # Ensure that t_x_cur[-1] >= t_x_cur_est[-1]
+    # Ensure that all times are aligned
     if t_x_cur_est[-1] > t_x_cur[-1]:
         log.warning(
-            "The estimated state has a recording after the ground truth state. Shrinking t_x_cur_est and x_cur_est"
+            "The estimated state has a recording after the ground truth state. Shrinking (t_x_cur_est, x_cur_est), (t_ref_traj, u_ref_traj, x_ref_traj), and (t_pred_traj, u_pred_traj, x_pred_traj) to the last time of t_x_cur"
         )
         t_x_cur_est = t_x_cur_est[t_x_cur_est <= t_x_cur[-1]]
         x_cur_est = x_cur_est[: len(t_x_cur_est)]
+        t_ref_traj = t_ref_traj[t_ref_traj <= t_x_cur[-1]]
+        u_ref_traj = u_ref_traj[: len(t_ref_traj)]
+        x_ref_traj = x_ref_traj[: len(t_ref_traj)]
+        t_pred_traj = t_pred_traj[t_pred_traj <= t_x_cur[-1]]
+        u_pred_traj = u_pred_traj[: len(t_pred_traj)]
+        x_pred_traj = x_pred_traj[: len(t_pred_traj)]
 
     # Check if the estimated state overlaps with the ground truth state
     if check_gt_est_states:
@@ -281,10 +290,11 @@ if __name__ == "__main__":
                     f"x_cur_est: {x_cur_est[first_diff_idx]}"
                 )
 
-    # Select data to print
-    # Check t_to_print and t_to_plot
+    # Determine min and max times for printing and plotting
     t_min = min(np.min(t_x_cur_est), np.min(t_ref_traj), np.min(t_pred_traj))
     t_max = max(np.max(t_x_cur_est), np.max(t_ref_traj), np.max(t_pred_traj))
+
+    # Select data to print
     if t_print != -1 and (t_print < t_min or t_print > t_max):
         raise ValueError(
             f"t_print ({t_print}) should be either -1 or be contained within bounds [{t_min}, {t_max}]"
@@ -377,8 +387,29 @@ if __name__ == "__main__":
             print(f"{key}_track_err: {track_err}")
 
     # Select data to plot
-    if t_plot == -1:
-        raise ValueError("t must be a non-negative value for plotting")
+    if len(t_plot) != 2:
+        raise ValueError("t_plot must contain exactly two elements")
+    elif (
+        t_plot[0] < t_min or t_plot[0] > t_max or t_plot[1] < t_min or t_plot[1] > t_max
+    ):
+        raise ValueError(
+            f"The interval specified by t_plot ({t_plot}) must be contained within bounds [{t_min}, {t_max}]"
+        )
+    t_total_plot = t_plot[1] - t_plot[0]
+    mpc_idc_plot = np.where((t_x_cur_est >= t_plot[0]) & (t_x_cur_est <= t_plot[1]))[0]
+    t_x_cur_est_plot = t_x_cur_est[mpc_idc_plot]
+    x_cur_est_plot = x_cur_est[mpc_idc_plot]
+    t_ref_traj_plot = t_ref_traj[mpc_idc_plot]
+    u_ref_traj_plot = u_ref_traj[mpc_idc_plot]
+    x_ref_traj_plot = x_ref_traj[mpc_idc_plot]
+    t_pred_traj_plot = t_pred_traj[mpc_idc_plot]
+    u_pred_traj_plot = u_pred_traj[mpc_idc_plot]
+    x_pred_traj_plot = x_pred_traj[mpc_idc_plot]
+    x_cur_idc_plot = np.where(
+        (t_x_cur >= t_x_cur_est_plot[0]) & (t_x_cur <= t_x_cur_est_plot[-1])
+    )[0]
+    t_x_cur_plot = t_x_cur[x_cur_idc_plot]
+    x_cur_plot = x_cur[x_cur_idc_plot]
 
     # Create figure
     helpers.set_plt_properties()
@@ -421,61 +452,54 @@ if __name__ == "__main__":
 
     # Add TMPC reference trajectory to plot
     handles_tmpc_ref = []
-    for k in range(N_tmpc + 1):
-        tmpc_ref = Circle(
-            (
-                x_ref_traj[t_ref_traj_idx, k, 0],
-                x_ref_traj[t_ref_traj_idx, k, 1],
-            ),
-            r_tmpc_ref,
-            facecolor=c_tmpc_ref,
-            alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, N_tmpc * ts_tmpc),
-            zorder=2,
-            label="TMPC ref pos",
-        )
-        handles_tmpc_ref.append(ax.add_patch(tmpc_ref))
+    for t_idx in mpc_idc_plot:
+        for k in k_ref:
+            tmpc_ref = Circle(
+                (
+                    x_ref_traj[t_idx, k, 0],
+                    x_ref_traj[t_idx, k, 1],
+                ),
+                r_tmpc_ref,
+                facecolor=c_tmpc_ref,
+                alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, t_total_plot),
+                zorder=2,
+                label="TMPC ref pos",
+            )
+            handles_tmpc_ref.append(ax.add_patch(tmpc_ref))
 
     # Add TMPC prediction to plot
-    handle_x0 = ax.add_patch(
-        Circle(
-            (
-                x_cur_est[t_x_cur_est_idx, 0],
-                x_cur_est[t_x_cur_est_idx, 1],
-            ),
-            r_x0,
-            facecolor=c_x0,
-            alpha=compute_alpha(alpha_min, alpha_max, 0, N_tmpc * ts_tmpc),
-            zorder=4,
-            label="TMPC init pos",
-        )
-    )
     handles_tmpc_pred = []
-    for k in range(1, N_tmpc + 1):
-        tmpc_pred = Circle(
-            (
-                x_pred_traj[t_pred_traj_idx, k, 0],
-                x_pred_traj[t_pred_traj_idx, k, 1],
-            ),
-            r_tmpc,
-            facecolor=c_tmpc,
-            alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, N_tmpc * ts_tmpc),
-            zorder=3,
-            label="TMPC prediction",
-        )
-        handles_tmpc_pred.append(ax.add_patch(tmpc_pred))
+    for t_idx in mpc_idc_plot:
+        for k in k_pred:
+            if k == 0:
+                facecolor = c_x0
+            else:
+                facecolor = c_tmpc
+            tmpc_pred = Circle(
+                (
+                    x_pred_traj[t_idx, k, 0],
+                    x_pred_traj[t_idx, k, 1],
+                ),
+                r_tmpc,
+                facecolor=facecolor,
+                alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, t_total_plot),
+                zorder=3,
+                label="TMPC prediction",
+            )
+            handles_tmpc_pred.append(ax.add_patch(tmpc_pred))
 
     # Add closed-loop state to plot
     handles_x = []
-    for t_x_cur_idx in range(t_x_cur_start_idx, t_x_cur_end_idx + 1):
+    for t_idx in x_cur_idc_plot:
         x = Circle(
-            (x_cur[t_x_cur_idx, 0], x_cur[t_x_cur_idx, 1]),
+            (x_cur[t_idx, 0], x_cur[t_idx, 1]),
             r_x,
             facecolor=c_x,
             alpha=compute_alpha(
                 alpha_min,
                 alpha_max,
-                (t_x_cur_idx - t_x_cur_start_idx) * ts_sim,
-                N_tmpc * ts_tmpc,
+                (t_idx - x_cur_idc_plot[0]) * ts_sim,
+                t_total_plot,
             ),
             zorder=5,
             label="Closed-loop pos",
@@ -503,7 +527,6 @@ if __name__ == "__main__":
         handles_obs[0],
         inflated_obs_patch,
         handles_tmpc_ref[0],
-        handle_x0,
         handles_tmpc_pred[0],
         handles_x[0],
     ]
