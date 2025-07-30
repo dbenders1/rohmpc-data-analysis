@@ -10,7 +10,7 @@ import numpy as np
 
 from enum import Enum
 from matplotlib.legend_handler import HandlerPatch
-from matplotlib.patches import Circle, Ellipse, Polygon
+from matplotlib.patches import Circle, Ellipse, Patch, Polygon
 from os import path
 from pathlib import Path
 from rmpc_data_analysis import helpers
@@ -152,13 +152,15 @@ if __name__ == "__main__":
         config = yaml.load(file, Loader=yaml.FullLoader)
     runtime_json_name = config["data"]["runtime_json_name"]
     ros_rec_json_name = config["data"]["ros_rec_json_name"]
-    t = config["data"]["t"]
 
     print_settings = config["print_settings"]
+    t_print = print_settings["t"]
+    check_gt_est_states = print_settings["check_gt_est_states"]
     print_pobj_comp = print_settings["print_pobj_comp"]
     print_track_err = print_settings["print_track_err"]
 
     plot_settings = config["plot_settings"]
+    t_plot = plot_settings["t"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
     r_tmpc = plot_settings["r_tmpc"]
     r_x0 = plot_settings["r_x0"]
@@ -217,26 +219,20 @@ if __name__ == "__main__":
     data_x_cur = ros_rec_data["/falcon/ground_truth/odometry"]
     t_x_cur = np.array(data_x_cur["t"])
     x_cur = np.array(data_x_cur["x"])
-    print(f"x_cur.shape: {x_cur.shape})")
 
     data_x_cur_est = ros_rec_data["/mpc/rec/current_state"]
     t_x_cur_est = np.array(data_x_cur_est["t"])
     x_cur_est = np.array(data_x_cur_est["current_state"])
-    print(f"x_cur_est.shape: {np.array(x_cur_est).shape}")
 
     data_ref_traj = ros_rec_data["/mpc/rec/reference_trajectory/0"]
     t_ref_traj = np.array(data_ref_traj["t"])
     u_ref_traj = np.array(data_ref_traj["u_ref"])
     x_ref_traj = np.array(data_ref_traj["x_ref"])
-    print(f"u_ref_traj_.shape: {u_ref_traj.shape}")
-    print(f"x_ref_traj_.shape: {x_ref_traj.shape}")
 
     data_pred_traj = ros_rec_data["/mpc/rec/predicted_trajectory/0"]
     t_pred_traj = np.array(data_pred_traj["t"])
     u_pred_traj = np.array(data_pred_traj["u_pred"])
     x_pred_traj = np.array(data_pred_traj["x_pred"])
-    print(f"u_pred_traj_.shape: {u_pred_traj.shape}")
-    print(f"x_pred_traj_.shape: {x_pred_traj.shape}")
 
     # Computed vertices of obstacle and vertices required to create inflated rectangular obstacles
     obs_verts = helpers.compute_inflated_obstacle_vertices(obs_list, robot_radius)
@@ -247,14 +243,6 @@ if __name__ == "__main__":
     t_ref_traj = np.round(t_ref_traj, time_precision)
     t_pred_traj = np.round(t_pred_traj, time_precision)
 
-    # Check t_to_print and t_to_plot
-    t_min = min(np.min(t_x_cur_est), np.min(t_ref_traj), np.min(t_pred_traj))
-    t_max = max(np.max(t_x_cur_est), np.max(t_ref_traj), np.max(t_pred_traj))
-    if t != -1 and (t < t_min or t > t_max):
-        raise ValueError(
-            f"t ({t}) should be either -1 or be contained within bounds [{t_min}, {t_max}]"
-        )
-
     # Determine various parameters of runtime data
     n_tmpc = min(len(t_x_cur_est), len(t_ref_traj), len(t_pred_traj))
     N_tmpc = x_ref_traj.shape[1] - 1
@@ -263,9 +251,7 @@ if __name__ == "__main__":
     ts_sim = np.round(t_x_cur[1] - t_x_cur[0], time_precision)
     Q_dt = Q * dt_tmpc
     R_dt = R * dt_tmpc
-    print(f"n_tmpc: {n_tmpc}, N_tmpc: {N_tmpc}, ts_tmpc: {ts_tmpc}, ts_sim: {ts_sim}")
 
-    # Check if the estimated state overlaps with the ground truth state
     # Ensure that t_x_cur[-1] >= t_x_cur_est[-1]
     if t_x_cur_est[-1] > t_x_cur[-1]:
         log.warning(
@@ -273,56 +259,50 @@ if __name__ == "__main__":
         )
         t_x_cur_est = t_x_cur_est[t_x_cur_est <= t_x_cur[-1]]
         x_cur_est = x_cur_est[: len(t_x_cur_est)]
-    x_cur_mpc_start = x_cur[np.where(np.isin(t_x_cur, t_x_cur_est))[0], :]
-    states_equal = np.all(np.abs(x_cur_mpc_start - x_cur_est) < FLOAT_TOL, axis=1)
-    if np.all(states_equal):
-        log.warning(
-            "The estimated state matches the ground truth state at the MPC start times"
-        )
-    else:
-        log.warning(
-            "The estimated state does not match the ground truth state at the MPC start times"
-        )
-        first_diff_idx = np.where(~states_equal)[0][0]
-        if first_diff_idx < x_cur_mpc_start.shape[0]:
-            log.warning(
-                f"First difference at index {first_diff_idx}: "
-                f"First difference at time {t_x_cur_est[first_diff_idx]} s: "
-                f"x_cur_mpc_start: {x_cur_mpc_start[first_diff_idx]}, "
-                f"x_cur_est: {x_cur_est[first_diff_idx]}"
-            )
 
-    # Select data to print and plot
-    if t < 0:
+    # Check if the estimated state overlaps with the ground truth state
+    if check_gt_est_states:
+        x_cur_mpc_start = x_cur[np.where(np.isin(t_x_cur, t_x_cur_est))[0], :]
+        states_equal = np.all(np.abs(x_cur_mpc_start - x_cur_est) < FLOAT_TOL, axis=1)
+        if np.all(states_equal):
+            log.warning(
+                "The estimated state matches the ground truth state at the MPC start times"
+            )
+        else:
+            log.warning(
+                "The estimated state does not match the ground truth state at the MPC start times"
+            )
+            first_diff_idx = np.where(~states_equal)[0][0]
+            if first_diff_idx < x_cur_mpc_start.shape[0]:
+                log.warning(
+                    f"First difference at index {first_diff_idx}: "
+                    f"First difference at time {t_x_cur_est[first_diff_idx]} s: "
+                    f"x_cur_mpc_start: {x_cur_mpc_start[first_diff_idx]}, "
+                    f"x_cur_est: {x_cur_est[first_diff_idx]}"
+                )
+
+    # Select data to print
+    # Check t_to_print and t_to_plot
+    t_min = min(np.min(t_x_cur_est), np.min(t_ref_traj), np.min(t_pred_traj))
+    t_max = max(np.max(t_x_cur_est), np.max(t_ref_traj), np.max(t_pred_traj))
+    if t_print != -1 and (t_print < t_min or t_print > t_max):
+        raise ValueError(
+            f"t_print ({t_print}) should be either -1 or be contained within bounds [{t_min}, {t_max}]"
+        )
+
+    if t_print < 0:
         t_x_cur_est_idx = -1
         t_pred_traj_idx = -1
         t_ref_traj_idx = -1
     else:
-        t_x_cur_est_idx = np.abs(t_x_cur_est - t).argmin()
+        t_x_cur_est_idx = np.abs(t_x_cur_est - t_print).argmin()
         t_mpc_start = t_x_cur_est[t_x_cur_est_idx]
         t_x_cur_start_idx = np.abs(t_x_cur - t_mpc_start).argmin()
         t_x_cur_end_idx = np.abs(
             t_x_cur - np.round(t_mpc_start + N_tmpc * ts_tmpc, time_precision)
         ).argmin()
-        t_pred_traj_idx = np.abs(t_pred_traj - t).argmin()
-        t_ref_traj_idx = np.abs(t_ref_traj - t).argmin()
-
-        # Print times and indices
-        print(f"t_x_cur_start_idx: {t_x_cur_start_idx}")
-        print(f"t_x_cur_start: {t_x_cur[t_x_cur_start_idx]}")
-        print(f"t_x_cur_end_idx: {t_x_cur_end_idx}")
-        print(f"t_x_cur_end: {t_x_cur[t_x_cur_end_idx]}")
-        print(f"t_x_cur_est_idx: {t_x_cur_est_idx}")
-        print(f"t_x_cur_est: {t_x_cur_est[t_x_cur_est_idx]}")
-        print(f"t_ref_traj_idx: {t_ref_traj_idx}")
-        print(f"t_ref_traj: {t_ref_traj[t_ref_traj_idx]}")
-        print(f"t_pred_traj_idx: {t_pred_traj_idx}")
-        print(f"t_pred_traj: {t_pred_traj[t_pred_traj_idx]}")
-
-        # Print trajectory points
-        # print(f"x_cur_est: {x_cur_est[t_x_cur_est_idx]}")
-        print(f"x_pred_traj: {x_pred_traj[t_pred_traj_idx, 0, :]}")
-        # print(f"x_ref_traj: {x_ref_traj[t_ref_traj_idx, 0, :]}")
+        t_pred_traj_idx = np.abs(t_pred_traj - t_print).argmin()
+        t_ref_traj_idx = np.abs(t_ref_traj - t_print).argmin()
 
     # Compute objective values
     if print_pobj_comp:
@@ -397,7 +377,7 @@ if __name__ == "__main__":
             print(f"{key}_track_err: {track_err}")
 
     # Select data to plot
-    if t == -1:
+    if t_plot == -1:
         raise ValueError("t must be a non-negative value for plotting")
 
     # Create figure
@@ -518,7 +498,10 @@ if __name__ == "__main__":
     ax.yaxis.labelpad = props["ylabelpad"]
     ax.tick_params(pad=props["tickpad"])
     ax.set_axisbelow(True)
+    inflated_obs_patch = Patch(color=c_obs_inflated, label="$\\mathcal{R}$")
     handles = [
+        handles_obs[0],
+        inflated_obs_patch,
         handles_tmpc_ref[0],
         handle_x0,
         handles_tmpc_pred[0],

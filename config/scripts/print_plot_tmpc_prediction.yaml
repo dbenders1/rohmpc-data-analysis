@@ -9,17 +9,18 @@ data:
   # ros_rec_json_name: 2025-07-29_gaz_meas_noise_falcon_check_tmpc_cost_rohmpc
   runtime_json_name: 2025-07-30_11-57__ReferenceTrajectory_StaticPolyhedronConstraints_0
   ros_rec_json_name: 2025-07-29_gaz_meas_noise_falcon_-1_-1_to_0_0
-  # t: -1
-  # t: 2.5
-  t: 3
-  # t: 6
 
 print_settings:
-  print_pobj_comp: True
+  # t: -1
+  t: 3
+  check_gt_est_states: False
+  print_pobj_comp: False
   # print_track_err: ["total", "u", "x", "p", "2d_p"]
   print_track_err: []
 
 plot_settings:
+  t: [3, 5]
+  k: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   r_tmpc_ref: 0.0003
   r_tmpc: 0.0002
   r_x0: 0.0002
