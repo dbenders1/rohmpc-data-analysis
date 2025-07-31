@@ -532,6 +532,14 @@ if __name__ == "__main__":
                     label="TMPC tube pos",
                 )
                 handles_tmpc_tube.append(tube_handle)
+            # Plot line segment connecting the inner and outer tube - to explicitly show the observer error
+            ax.plot(
+                tube[:2, 0, 0],
+                tube[:2, 0, 1],
+                color=c_tmpc,
+                linewidth=linewidth_tmpc_tube,
+                zorder=3,
+            )
         handles.append(handles_tmpc_tube[0][0])
 
     # Add TMPC prediction to plot
