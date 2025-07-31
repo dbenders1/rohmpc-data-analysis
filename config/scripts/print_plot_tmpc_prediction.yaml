@@ -9,7 +9,7 @@ data:
   # ros_rec_json_name: 2025-07-29_gaz_meas_noise_falcon_check_tmpc_cost_rohmpc
   # runtime_json_name: 2025-07-30_11-57__ReferenceTrajectory_StaticPolyhedronConstraints_0
   # ros_rec_json_name: 2025-07-29_gaz_meas_noise_falcon_-1_-1_to_0_0
-  runtime_json_name: 2025-07-31_07-01__ReferenceTrajectory_StaticPolyhedronConstraints_0
+  runtime_json_name: 2025-07-31_09-57__ReferenceTrajectory_StaticPolyhedronConstraints_0
   ros_rec_json_name: 2025-07-31_gaz_meas_noise_falcon_-1_-1_to_0_0
 
 print_settings:
@@ -29,11 +29,12 @@ do_plot:
   x: True
 
 plot_settings:
-  t: [3, 5]
+  t: [1, 4]
   k_ref: [0]
   k_pred: [0]
   t_div_tube: 5
   linewidth_rpi_tube: 0.2
+  grid_resolution: 0.01 # needs to be the same value as specified in the map used by the occupancy grid creator
   r_tmpc_ref: 0.0003
   r_tmpc: 0.0002
   r_x0: 0.0002

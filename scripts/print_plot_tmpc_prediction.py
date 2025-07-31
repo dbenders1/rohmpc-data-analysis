@@ -173,6 +173,8 @@ if __name__ == "__main__":
     k_pred = plot_settings["k_pred"]
     t_div_tube = plot_settings["t_div_tube"]
     linewidth_rpi_tube = plot_settings["linewidth_rpi_tube"]
+    grid_resolution = plot_settings["grid_resolution"]
+    half_grid_resolution = grid_resolution / 2
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
     r_tmpc = plot_settings["r_tmpc"]
     r_x0 = plot_settings["r_x0"]
@@ -250,7 +252,9 @@ if __name__ == "__main__":
     x_pred_traj = np.array(data_pred_traj["x_pred"])
 
     # Computed vertices of obstacle and vertices required to create inflated rectangular obstacles
-    obs_verts = helpers.compute_inflated_obstacle_vertices(obs_list, robot_radius)
+    obs_verts = helpers.compute_inflated_obstacle_vertices(
+        obs_list, robot_radius - half_grid_resolution
+    )
 
     # Set times to a specific precision
     t_x_cur = np.round(t_x_cur, time_precision)
@@ -457,7 +461,7 @@ if __name__ == "__main__":
             for i in range(4):
                 obs_polygon_circle = Circle(
                     verts["orig"][i, :],
-                    robot_radius,
+                    robot_radius - half_grid_resolution,
                     color=c_obs_inflated,
                     fill=True,
                     zorder=0,
