@@ -34,6 +34,7 @@ plot_settings:
   k_pred: [0]
   t_div_tube: 5
   linewidth_rpi_tube: 0.2
+  linewidth_growing_tube: 0.2
   grid_resolution: 0.01 # needs to be the same value as specified in the map used by the occupancy grid creator
   r_tmpc_ref: 0.0003
   r_tmpc: 0.0002

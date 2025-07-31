@@ -173,6 +173,7 @@ if __name__ == "__main__":
     k_pred = plot_settings["k_pred"]
     t_div_tube = plot_settings["t_div_tube"]
     linewidth_rpi_tube = plot_settings["linewidth_rpi_tube"]
+    linewidth_growing_tube = plot_settings["linewidth_growing_tube"]
     grid_resolution = plot_settings["grid_resolution"]
     half_grid_resolution = grid_resolution / 2
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
@@ -181,9 +182,10 @@ if __name__ == "__main__":
     r_x = plot_settings["r_x"]
 
     c_obs_inflated = Colors.GREY.value
-    c_rpi_tube = mcolors.CSS4_COLORS["blue"]
     c_tmpc_ref = mcolors.CSS4_COLORS["red"]
+    c_rpi_tube = mcolors.CSS4_COLORS["blue"]
     c_tmpc = Colors.ORANGE.value
+    c_growing_tube = c_tmpc
     c_x0 = Colors.PURPLE.value
     c_x = mcolors.CSS4_COLORS["green"]
     c_xf = mcolors.CSS4_COLORS["black"]
@@ -204,7 +206,9 @@ if __name__ == "__main__":
     P = np.array(runtime_static_data["P"])
     alpha = runtime_static_data["alpha"]
     c_o = runtime_static_data["c_o"]
+    epsilon = runtime_static_data["epsilon"]
     robot_radius = runtime_static_data["robot_radius"]
+    s_pred = np.array(runtime_static_data["s_pred"])
     stepsize_tmpc = runtime_static_data["stepsize"]
     steps_tmpc = runtime_static_data["steps"]
 
@@ -537,7 +541,24 @@ if __name__ == "__main__":
 
     # Compute growing tubes around specific TMPC predictions and add to plot
     if do_plot_growing_tube:
-        print(f"Growing tubes around TMPC predictions are not implemented yet")
+        handles_growing_tube = []
+        pred_traj_pos_tube = x_pred_traj_plot[::t_div_tube, :, :2]
+        for t_idx in range(pred_traj_pos_tube.shape[0]):
+            tube = helpers.compute_tube(
+                pred_traj_pos_tube[t_idx, :, :],
+                c_o * (s_pred + epsilon),
+            )
+            for tube_idx in range(tube.shape[0]):
+                tube_handle = ax.plot(
+                    tube[tube_idx, :, 0],
+                    tube[tube_idx, :, 1],
+                    color=c_growing_tube,
+                    linewidth=linewidth_growing_tube,
+                    zorder=3,
+                    label="Growing tube",
+                )
+                handles_growing_tube.append(tube_handle)
+        handles.append(handles_growing_tube[0][0])
 
     # Add closed-loop state to plot
     if do_plot_x:
