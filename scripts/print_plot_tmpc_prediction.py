@@ -161,19 +161,19 @@ if __name__ == "__main__":
 
     do_plot_settings = config["do_plot"]
     do_plot_obs = do_plot_settings["obs"]
+    do_plot_pmpc_tube = do_plot_settings["pmpc_tube"]
     do_plot_tmpc_ref = do_plot_settings["tmpc_ref"]
-    do_plot_rpi_tube = do_plot_settings["rpi_tube"]
+    do_plot_tmpc_tube = do_plot_settings["tmpc_tube"]
     do_plot_tmpc_pred = do_plot_settings["tmpc_pred"]
-    do_plot_growing_tube = do_plot_settings["growing_tube"]
     do_plot_x = do_plot_settings["x"]
 
     plot_settings = config["plot_settings"]
     t_plot = plot_settings["t"]
     k_ref = plot_settings["k_ref"]
     k_pred = plot_settings["k_pred"]
-    t_div_tube = plot_settings["t_div_tube"]
-    linewidth_rpi_tube = plot_settings["linewidth_rpi_tube"]
-    linewidth_growing_tube = plot_settings["linewidth_growing_tube"]
+    t_div_tmpc_tube = plot_settings["t_div_tmpc_tube"]
+    linewidth_pmpc_tube = plot_settings["linewidth_pmpc_tube"]
+    linewidth_tmpc_tube = plot_settings["linewidth_tmpc_tube"]
     grid_resolution = plot_settings["grid_resolution"]
     half_grid_resolution = grid_resolution / 2
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
@@ -182,10 +182,9 @@ if __name__ == "__main__":
     r_x = plot_settings["r_x"]
 
     c_obs_inflated = Colors.GREY.value
+    c_pmpc = mcolors.CSS4_COLORS["blue"]
     c_tmpc_ref = mcolors.CSS4_COLORS["red"]
-    c_rpi_tube = mcolors.CSS4_COLORS["blue"]
     c_tmpc = Colors.ORANGE.value
-    c_growing_tube = c_tmpc
     c_x0 = Colors.PURPLE.value
     c_x = mcolors.CSS4_COLORS["green"]
     c_xf = mcolors.CSS4_COLORS["black"]
@@ -475,6 +474,24 @@ if __name__ == "__main__":
         inflated_obs_patch = Patch(color=c_obs_inflated, label="$\\mathcal{R}$")
         handles.append(inflated_obs_patch)
 
+    # Compute PMPC tube around reference trajectory and add to plot
+    if do_plot_pmpc_tube:
+        ref_traj_pos = x_ref_traj_plot[:, 0, :2]
+        pmpc_tightening = c_o * alpha
+        pmpc_tube = helpers.compute_tube(ref_traj_pos, pmpc_tightening)
+        handles_pmpc_tube = []
+        for tube_idx in range(pmpc_tube.shape[0]):
+            tube_handle = ax.plot(
+                pmpc_tube[tube_idx, :, 0],
+                pmpc_tube[tube_idx, :, 1],
+                color=c_pmpc,
+                linewidth=linewidth_pmpc_tube,
+                zorder=2,
+                label="PMPC tube pos",
+            )
+            handles_pmpc_tube.append(tube_handle)
+        handles.append(handles_pmpc_tube[0][0])
+
     # Add TMPC reference trajectory to plot
     if do_plot_tmpc_ref:
         handles_tmpc_ref = []
@@ -496,23 +513,26 @@ if __name__ == "__main__":
                 handles_tmpc_ref.append(ax.add_patch(tmpc_ref))
         handles.append(handles_tmpc_ref[0])
 
-    # Compute RPI tube around reference trajectory and add to plot
-    if do_plot_rpi_tube:
-        ref_traj_pos = x_ref_traj_plot[:, 0, :2]
-        pmpc_tightening = c_o * alpha
-        rpi_tube = helpers.compute_tube(ref_traj_pos, pmpc_tightening)
-        handles_rpi_tube = []
-        for tube_idx in range(rpi_tube.shape[0]):
-            tube_handle = ax.plot(
-                rpi_tube[tube_idx, :, 0],
-                rpi_tube[tube_idx, :, 1],
-                color=c_rpi_tube,
-                linewidth=linewidth_rpi_tube,
-                zorder=2,
-                label="RPI tube",
+    # Compute growing tubes around specific TMPC predictions and add to plot
+    if do_plot_tmpc_tube:
+        handles_tmpc_tube = []
+        pred_traj_pos_tube = x_pred_traj_plot[::t_div_tmpc_tube, :, :2]
+        for t_idx in range(pred_traj_pos_tube.shape[0]):
+            tube = helpers.compute_tube(
+                pred_traj_pos_tube[t_idx, :, :],
+                c_o * (s_pred + epsilon),
             )
-            handles_rpi_tube.append(tube_handle)
-        handles.append(handles_rpi_tube[0][0])
+            for tube_idx in range(tube.shape[0]):
+                tube_handle = ax.plot(
+                    tube[tube_idx, :, 0],
+                    tube[tube_idx, :, 1],
+                    color=c_tmpc,
+                    linewidth=linewidth_tmpc_tube,
+                    zorder=3,
+                    label="TMPC tube pos",
+                )
+                handles_tmpc_tube.append(tube_handle)
+        handles.append(handles_tmpc_tube[0][0])
 
     # Add TMPC prediction to plot
     if do_plot_tmpc_pred:
@@ -534,31 +554,10 @@ if __name__ == "__main__":
                         alpha_min, alpha_max, k * ts_tmpc, t_total_plot
                     ),
                     zorder=3,
-                    label="TMPC prediction",
+                    label="TMPC predicted pos",
                 )
                 handles_tmpc_pred.append(ax.add_patch(tmpc_pred))
         handles.append(handles_tmpc_pred[0])
-
-    # Compute growing tubes around specific TMPC predictions and add to plot
-    if do_plot_growing_tube:
-        handles_growing_tube = []
-        pred_traj_pos_tube = x_pred_traj_plot[::t_div_tube, :, :2]
-        for t_idx in range(pred_traj_pos_tube.shape[0]):
-            tube = helpers.compute_tube(
-                pred_traj_pos_tube[t_idx, :, :],
-                c_o * (s_pred + epsilon),
-            )
-            for tube_idx in range(tube.shape[0]):
-                tube_handle = ax.plot(
-                    tube[tube_idx, :, 0],
-                    tube[tube_idx, :, 1],
-                    color=c_growing_tube,
-                    linewidth=linewidth_growing_tube,
-                    zorder=3,
-                    label="Growing tube",
-                )
-                handles_growing_tube.append(tube_handle)
-        handles.append(handles_growing_tube[0][0])
 
     # Add closed-loop state to plot
     if do_plot_x:

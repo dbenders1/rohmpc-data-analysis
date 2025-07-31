@@ -22,19 +22,19 @@ print_settings:
 
 do_plot:
   obs: True
+  pmpc_tube: True
   tmpc_ref: True
-  rpi_tube: True
+  tmpc_tube: True
   tmpc_pred: True
-  growing_tube: True
   x: True
 
 plot_settings:
   t: [1, 4]
   k_ref: [0]
   k_pred: [0]
-  t_div_tube: 5
-  linewidth_rpi_tube: 0.2
-  linewidth_growing_tube: 0.2
+  t_div_tmpc_tube: 20
+  linewidth_pmpc_tube: 0.2
+  linewidth_tmpc_tube: 0.2
   grid_resolution: 0.01 # needs to be the same value as specified in the map used by the occupancy grid creator
   r_tmpc_ref: 0.0003
   r_tmpc: 0.0002
