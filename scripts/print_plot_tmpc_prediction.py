@@ -159,17 +159,27 @@ if __name__ == "__main__":
     print_pobj_comp = print_settings["print_pobj_comp"]
     print_track_err = print_settings["print_track_err"]
 
+    do_plot_settings = config["do_plot"]
+    do_plot_obs = do_plot_settings["obs"]
+    do_plot_tmpc_ref = do_plot_settings["tmpc_ref"]
+    do_plot_rpi_tube = do_plot_settings["rpi_tube"]
+    do_plot_tmpc_pred = do_plot_settings["tmpc_pred"]
+    do_plot_growing_tube = do_plot_settings["growing_tube"]
+    do_plot_x = do_plot_settings["x"]
+
     plot_settings = config["plot_settings"]
     t_plot = plot_settings["t"]
     k_ref = plot_settings["k_ref"]
     k_pred = plot_settings["k_pred"]
     t_div_tube = plot_settings["t_div_tube"]
+    linewidth_rpi_tube = plot_settings["linewidth_rpi_tube"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
     r_tmpc = plot_settings["r_tmpc"]
     r_x0 = plot_settings["r_x0"]
     r_x = plot_settings["r_x"]
 
     c_obs_inflated = Colors.GREY.value
+    c_rpi_tube = mcolors.CSS4_COLORS["blue"]
     c_tmpc_ref = mcolors.CSS4_COLORS["red"]
     c_tmpc = Colors.ORANGE.value
     c_x0 = Colors.PURPLE.value
@@ -190,6 +200,8 @@ if __name__ == "__main__":
     Q = np.array(runtime_static_data["Q"])
     R = np.array(runtime_static_data["R"])
     P = np.array(runtime_static_data["P"])
+    alpha = runtime_static_data["alpha"]
+    c_o = runtime_static_data["c_o"]
     robot_radius = runtime_static_data["robot_radius"]
     stepsize_tmpc = runtime_static_data["stepsize"]
     steps_tmpc = runtime_static_data["steps"]
@@ -415,96 +427,133 @@ if __name__ == "__main__":
     helpers.set_plt_properties()
     props = helpers.set_fig_properties()
     fig, ax = plt.subplots()
+    handles = []
 
     # Add obstacles to plot
-    handles_obs = []
-    for obs_idx, verts in enumerate(obs_verts):
-        if obs_idx == 0:
-            obs_polygon = Polygon(
-                verts["orig"],
-                closed=True,
-                edgecolor="black",
-                facecolor="black",
-                label="Obstacle",
+    if do_plot_obs:
+        handles_obs = []
+        for obs_idx, verts in enumerate(obs_verts):
+            if obs_idx == 0:
+                obs_polygon = Polygon(
+                    verts["orig"],
+                    closed=True,
+                    edgecolor="black",
+                    facecolor="black",
+                    label="Obstacle",
+                )
+            else:
+                obs_polygon = Polygon(
+                    verts["orig"], closed=True, edgecolor="black", facecolor="black"
+                )
+            handles_obs.append(ax.add_patch(obs_polygon))
+            obs_polygon_long = Polygon(
+                verts["long"], closed=True, color=c_obs_inflated, zorder=0
             )
-        else:
-            obs_polygon = Polygon(
-                verts["orig"], closed=True, edgecolor="black", facecolor="black"
+            handles_obs.append(ax.add_patch(obs_polygon_long))
+            obs_polygon_wide = Polygon(
+                verts["wide"], closed=True, color=c_obs_inflated, zorder=0
             )
-        handles_obs.append(ax.add_patch(obs_polygon))
-        obs_polygon_long = Polygon(
-            verts["long"], closed=True, color=c_obs_inflated, zorder=0
-        )
-        handles_obs.append(ax.add_patch(obs_polygon_long))
-        obs_polygon_wide = Polygon(
-            verts["wide"], closed=True, color=c_obs_inflated, zorder=0
-        )
-        handles_obs.append(ax.add_patch(obs_polygon_wide))
-        for i in range(4):
-            obs_polygon_circle = Circle(
-                verts["orig"][i, :],
-                robot_radius,
-                color=c_obs_inflated,
-                fill=True,
-                zorder=0,
-            )
-            handles_obs.append(ax.add_patch(obs_polygon_circle))
+            handles_obs.append(ax.add_patch(obs_polygon_wide))
+            for i in range(4):
+                obs_polygon_circle = Circle(
+                    verts["orig"][i, :],
+                    robot_radius,
+                    color=c_obs_inflated,
+                    fill=True,
+                    zorder=0,
+                )
+                handles_obs.append(ax.add_patch(obs_polygon_circle))
+        handles.append(handles_obs[0])
+        inflated_obs_patch = Patch(color=c_obs_inflated, label="$\\mathcal{R}$")
+        handles.append(inflated_obs_patch)
 
     # Add TMPC reference trajectory to plot
-    handles_tmpc_ref = []
-    for t_idx in mpc_idc_plot:
-        for k in k_ref:
-            tmpc_ref = Circle(
-                (
-                    x_ref_traj[t_idx, k, 0],
-                    x_ref_traj[t_idx, k, 1],
-                ),
-                r_tmpc_ref,
-                facecolor=c_tmpc_ref,
-                alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, t_total_plot),
+    if do_plot_tmpc_ref:
+        handles_tmpc_ref = []
+        for t_idx in mpc_idc_plot:
+            for k in k_ref:
+                tmpc_ref = Circle(
+                    (
+                        x_ref_traj[t_idx, k, 0],
+                        x_ref_traj[t_idx, k, 1],
+                    ),
+                    r_tmpc_ref,
+                    facecolor=c_tmpc_ref,
+                    alpha=compute_alpha(
+                        alpha_min, alpha_max, k * ts_tmpc, t_total_plot
+                    ),
+                    zorder=2,
+                    label="TMPC ref pos",
+                )
+                handles_tmpc_ref.append(ax.add_patch(tmpc_ref))
+        handles.append(handles_tmpc_ref[0])
+
+    # Compute RPI tube around reference trajectory and add to plot
+    if do_plot_rpi_tube:
+        ref_traj_pos = x_ref_traj_plot[:, 0, :2]
+        pmpc_tightening = c_o * alpha
+        rpi_tube = helpers.compute_tube(ref_traj_pos, pmpc_tightening)
+        handles_rpi_tube = []
+        for tube_idx in range(rpi_tube.shape[0]):
+            tube_handle = ax.plot(
+                rpi_tube[tube_idx, :, 0],
+                rpi_tube[tube_idx, :, 1],
+                color=c_rpi_tube,
+                linewidth=linewidth_rpi_tube,
                 zorder=2,
-                label="TMPC ref pos",
+                label="RPI tube",
             )
-            handles_tmpc_ref.append(ax.add_patch(tmpc_ref))
+            handles_rpi_tube.append(tube_handle)
+        handles.append(handles_rpi_tube[0][0])
 
     # Add TMPC prediction to plot
-    handles_tmpc_pred = []
-    for t_idx in mpc_idc_plot:
-        for k in k_pred:
-            if k == 0:
-                facecolor = c_x0
-            else:
-                facecolor = c_tmpc
-            tmpc_pred = Circle(
-                (
-                    x_pred_traj[t_idx, k, 0],
-                    x_pred_traj[t_idx, k, 1],
-                ),
-                r_tmpc,
-                facecolor=facecolor,
-                alpha=compute_alpha(alpha_min, alpha_max, k * ts_tmpc, t_total_plot),
-                zorder=3,
-                label="TMPC prediction",
-            )
-            handles_tmpc_pred.append(ax.add_patch(tmpc_pred))
+    if do_plot_tmpc_pred:
+        handles_tmpc_pred = []
+        for t_idx in mpc_idc_plot:
+            for k in k_pred:
+                if k == 0:
+                    facecolor = c_x0
+                else:
+                    facecolor = c_tmpc
+                tmpc_pred = Circle(
+                    (
+                        x_pred_traj[t_idx, k, 0],
+                        x_pred_traj[t_idx, k, 1],
+                    ),
+                    r_tmpc,
+                    facecolor=facecolor,
+                    alpha=compute_alpha(
+                        alpha_min, alpha_max, k * ts_tmpc, t_total_plot
+                    ),
+                    zorder=3,
+                    label="TMPC prediction",
+                )
+                handles_tmpc_pred.append(ax.add_patch(tmpc_pred))
+        handles.append(handles_tmpc_pred[0])
+
+    # Compute growing tubes around specific TMPC predictions and add to plot
+    if do_plot_growing_tube:
+        print(f"Growing tubes around TMPC predictions are not implemented yet")
 
     # Add closed-loop state to plot
-    handles_x = []
-    for t_idx in x_cur_idc_plot:
-        x = Circle(
-            (x_cur[t_idx, 0], x_cur[t_idx, 1]),
-            r_x,
-            facecolor=c_x,
-            alpha=compute_alpha(
-                alpha_min,
-                alpha_max,
-                (t_idx - x_cur_idc_plot[0]) * ts_sim,
-                t_total_plot,
-            ),
-            zorder=5,
-            label="Closed-loop pos",
-        )
-        handles_x.append(ax.add_patch(x))
+    if do_plot_x:
+        handles_x = []
+        for t_idx in x_cur_idc_plot:
+            x = Circle(
+                (x_cur[t_idx, 0], x_cur[t_idx, 1]),
+                r_x,
+                facecolor=c_x,
+                alpha=compute_alpha(
+                    alpha_min,
+                    alpha_max,
+                    (t_idx - x_cur_idc_plot[0]) * ts_sim,
+                    t_total_plot,
+                ),
+                zorder=5,
+                label="Closed-loop pos",
+            )
+            handles_x.append(ax.add_patch(x))
+        handles.append(handles_x[0])
 
     # Add title, etc. to plot
     # ax.set_title(f"TMPC prediction", pad=props["titlepad"])
@@ -522,14 +571,6 @@ if __name__ == "__main__":
     ax.yaxis.labelpad = props["ylabelpad"]
     ax.tick_params(pad=props["tickpad"])
     ax.set_axisbelow(True)
-    inflated_obs_patch = Patch(color=c_obs_inflated, label="$\\mathcal{R}$")
-    handles = [
-        handles_obs[0],
-        inflated_obs_patch,
-        handles_tmpc_ref[0],
-        handles_tmpc_pred[0],
-        handles_x[0],
-    ]
     ax.legend(
         handles=handles,
         handler_map={

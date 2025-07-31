@@ -54,6 +54,45 @@ def compute_rotation_matrix_2d(angle):
     return np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
 
 
+def compute_tube(trajectory, r):
+    n_trajectory = len(trajectory)
+
+    if np.isscalar(r):
+        r = np.full(n_trajectory, r)
+
+    if len(r) != n_trajectory:
+        raise ValueError(
+            "Tube radius must be a scalar or an array with the same length as the trajectory."
+        )
+
+    # Compute averaged direction vectors and normals
+    normals = []
+    for i in range(n_trajectory):
+        if i == 0:
+            direction = trajectory[i + 1] - trajectory[i]
+        elif i == n_trajectory - 1:
+            direction = trajectory[i] - trajectory[i - 1]
+        else:
+            direction = (trajectory[i + 1] - trajectory[i - 1]) / 2
+        # Compute normal vector
+        normal = np.array([-direction[1], direction[0]])
+        normal = normal / np.linalg.norm(normal)
+        normals.append(normal)
+    normals = np.array(normals)
+
+    # Compute outer and inner boundaries
+    inner_boundary = []
+    outer_boundary = []
+    for i in range(n_trajectory):
+        inner_boundary.append(trajectory[i] - r[i] * normals[i])
+        outer_boundary.append(trajectory[i] + r[i] * normals[i])
+    inner_boundary = np.array(inner_boundary)
+    outer_boundary = np.array(outer_boundary)
+    tube = np.stack([inner_boundary, outer_boundary], axis=0)
+
+    return tube
+
+
 def set_fig_properties():
     props = dict()
     props["titlepad"] = 4
