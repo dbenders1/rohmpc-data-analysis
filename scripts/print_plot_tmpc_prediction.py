@@ -10,6 +10,7 @@ import numpy as np
 
 from enum import Enum
 from matplotlib.legend_handler import HandlerPatch
+from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle, Ellipse, Patch, Polygon
 from os import path
 from pathlib import Path
@@ -188,6 +189,12 @@ if __name__ == "__main__":
     c_x0 = Colors.PURPLE.value
     c_x = mcolors.CSS4_COLORS["green"]
     c_xf = mcolors.CSS4_COLORS["black"]
+    zorder_obs = 0
+    zorder_pmpc_tube = 1
+    zorder_tmpc_ref = 2
+    zorder_tmpc_tube = 1
+    zorder_tmpc_pred = 3
+    zorder_x = 4
     alpha_max = 1
     alpha_min = 0.5
 
@@ -454,11 +461,11 @@ if __name__ == "__main__":
                 )
             handles_obs.append(ax.add_patch(obs_polygon))
             obs_polygon_long = Polygon(
-                verts["long"], closed=True, color=c_obs_inflated, zorder=0
+                verts["long"], closed=True, color=c_obs_inflated, zorder=zorder_obs
             )
             handles_obs.append(ax.add_patch(obs_polygon_long))
             obs_polygon_wide = Polygon(
-                verts["wide"], closed=True, color=c_obs_inflated, zorder=0
+                verts["wide"], closed=True, color=c_obs_inflated, zorder=zorder_obs
             )
             handles_obs.append(ax.add_patch(obs_polygon_wide))
             for i in range(4):
@@ -467,7 +474,7 @@ if __name__ == "__main__":
                     robot_radius - half_grid_resolution,
                     color=c_obs_inflated,
                     fill=True,
-                    zorder=0,
+                    zorder=zorder_obs,
                 )
                 handles_obs.append(ax.add_patch(obs_polygon_circle))
         handles.append(handles_obs[0])
@@ -486,7 +493,7 @@ if __name__ == "__main__":
                 pmpc_tube[tube_idx, :, 1],
                 color=c_pmpc,
                 linewidth=linewidth_pmpc_tube,
-                zorder=2,
+                zorder=zorder_pmpc_tube,
                 label="PMPC tube pos",
             )
             handles_pmpc_tube.append(tube_handle)
@@ -507,7 +514,7 @@ if __name__ == "__main__":
                     alpha=compute_alpha(
                         alpha_min, alpha_max, k * ts_tmpc, t_total_plot
                     ),
-                    zorder=2,
+                    zorder=zorder_tmpc_ref,
                     label="TMPC ref pos",
                 )
                 handles_tmpc_ref.append(ax.add_patch(tmpc_ref))
@@ -522,24 +529,45 @@ if __name__ == "__main__":
                 pred_traj_pos_tube[t_idx, :, :],
                 c_o * (s_pred + epsilon),
             )
-            for tube_idx in range(tube.shape[0]):
-                tube_handle = ax.plot(
-                    tube[tube_idx, :, 0],
-                    tube[tube_idx, :, 1],
-                    color=c_tmpc,
-                    linewidth=linewidth_tmpc_tube,
-                    zorder=3,
-                    label="TMPC tube pos",
-                )
-                handles_tmpc_tube.append(tube_handle)
             # Plot line segment connecting the inner and outer tube - to explicitly show the observer error
             ax.plot(
                 tube[:2, 0, 0],
                 tube[:2, 0, 1],
                 color=c_tmpc,
                 linewidth=linewidth_tmpc_tube,
-                zorder=3,
+                zorder=zorder_tmpc_tube,
             )
+            # Plot the tube boundaries
+            for tube_idx in range(tube.shape[0]):
+                tube_handle = ax.plot(
+                    tube[tube_idx, :, 0],
+                    tube[tube_idx, :, 1],
+                    color=c_tmpc,
+                    linewidth=linewidth_tmpc_tube,
+                    zorder=zorder_tmpc_tube,
+                    label="TMPC tube pos",
+                )
+                handles_tmpc_tube.append(tube_handle)
+            # Plot the shaded area of the tube
+            patches = []
+            for i in range(tube.shape[1] - 1):
+                for j in range(tube.shape[0] - 1):
+                    area = [
+                        tube[j, i],
+                        tube[j, i + 1],
+                        tube[j + 1, i + 1],
+                        tube[j + 1, i],
+                    ]
+                    polygon = Polygon(area, closed=True)
+                    patches.append(polygon)
+            p = PatchCollection(
+                patches,
+                facecolor=c_tmpc,
+                edgecolor="none",
+                alpha=alpha_min,
+                zorder=zorder_tmpc_tube,
+            )
+            ax.add_collection(p)
         handles.append(handles_tmpc_tube[0][0])
 
     # Add TMPC prediction to plot
@@ -561,7 +589,7 @@ if __name__ == "__main__":
                     alpha=compute_alpha(
                         alpha_min, alpha_max, k * ts_tmpc, t_total_plot
                     ),
-                    zorder=3,
+                    zorder=zorder_tmpc_pred,
                     label="TMPC predicted pos",
                 )
                 handles_tmpc_pred.append(ax.add_patch(tmpc_pred))
@@ -581,7 +609,7 @@ if __name__ == "__main__":
                     (t_idx - x_cur_idc_plot[0]) * ts_sim,
                     t_total_plot,
                 ),
-                zorder=5,
+                zorder=zorder_x,
                 label="Closed-loop pos",
             )
             handles_x.append(ax.add_patch(x))
