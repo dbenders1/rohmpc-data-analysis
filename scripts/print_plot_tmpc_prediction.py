@@ -163,6 +163,7 @@ if __name__ == "__main__":
     do_plot_settings = config["do_plot"]
     do_plot_obs = do_plot_settings["obs"]
     do_plot_pmpc_tube = do_plot_settings["pmpc_tube"]
+    do_plot_pmpc_pred = do_plot_settings["pmpc_pred"]
     do_plot_tmpc_ref = do_plot_settings["tmpc_ref"]
     do_plot_tmpc_tube = do_plot_settings["tmpc_tube"]
     do_plot_tmpc_pred = do_plot_settings["tmpc_pred"]
@@ -170,6 +171,7 @@ if __name__ == "__main__":
 
     plot_settings = config["plot_settings"]
     t_plot = plot_settings["t"]
+    k_pmpc_pred = plot_settings["k_pmpc_pred"]
     k_ref = plot_settings["k_ref"]
     k_pred = plot_settings["k_pred"]
     t_div_tmpc_tube = plot_settings["t_div_tmpc_tube"]
@@ -177,24 +179,24 @@ if __name__ == "__main__":
     linewidth_tmpc_tube = plot_settings["linewidth_tmpc_tube"]
     grid_resolution = plot_settings["grid_resolution"]
     half_grid_resolution = grid_resolution / 2
+    r_pmpc = plot_settings["r_pmpc"]
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
     r_tmpc = plot_settings["r_tmpc"]
-    r_x0 = plot_settings["r_x0"]
     r_x = plot_settings["r_x"]
 
     c_obs_inflated = Colors.GREY.value
     c_pmpc = mcolors.CSS4_COLORS["blue"]
     c_tmpc_ref = mcolors.CSS4_COLORS["red"]
     c_tmpc = Colors.ORANGE.value
-    c_x0 = Colors.PURPLE.value
     c_x = mcolors.CSS4_COLORS["green"]
     c_xf = mcolors.CSS4_COLORS["black"]
     zorder_obs = 0
     zorder_pmpc_tube = 1
-    zorder_tmpc_ref = 2
+    zorder_pmpc_pred = 2
+    zorder_tmpc_ref = 3
     zorder_tmpc_tube = 1
-    zorder_tmpc_pred = 3
-    zorder_x = 4
+    zorder_tmpc_pred = 4
+    zorder_x = 5
     alpha_max = 1
     alpha_min = 0.5
 
@@ -261,6 +263,11 @@ if __name__ == "__main__":
     u_pred_traj = np.array(data_pred_traj["u_pred"])
     x_pred_traj = np.array(data_pred_traj["x_pred"])
 
+    data_pmpc_pred_traj = ros_rec_data["/mpc/rec/predicted_trajectory/1"]
+    t_pmpc_pred_traj = np.array(data_pmpc_pred_traj["t"])
+    u_pmpc_pred_traj = np.array(data_pmpc_pred_traj["u_pred"])
+    x_pmpc_pred_traj = np.array(data_pmpc_pred_traj["x_pred"])
+
     # Computed vertices of obstacle and vertices required to create inflated rectangular obstacles
     obs_verts = helpers.compute_inflated_obstacle_vertices(
         obs_list, robot_radius - half_grid_resolution
@@ -271,15 +278,22 @@ if __name__ == "__main__":
     t_x_cur_est = np.round(t_x_cur_est, time_precision)
     t_ref_traj = np.round(t_ref_traj, time_precision)
     t_pred_traj = np.round(t_pred_traj, time_precision)
+    t_pmpc_pred_traj = np.round(t_pmpc_pred_traj, time_precision)
 
     # Determine various parameters of runtime data
     n_tmpc = min(len(t_x_cur_est), len(t_ref_traj), len(t_pred_traj))
+    N_pmpc = x_pmpc_pred_traj.shape[1] - 1
     N_tmpc = x_ref_traj.shape[1] - 1
+    dt_pmpc = np.round(t_pmpc_pred_traj[1] - t_pmpc_pred_traj[0], time_precision)
     dt_tmpc = steps_tmpc * stepsize_tmpc
+    ts_pmpc = dt_pmpc
     ts_tmpc = np.round(t_ref_traj[1] - t_ref_traj[0], time_precision)
     ts_sim = np.round(t_x_cur[1] - t_x_cur[0], time_precision)
     Q_dt = Q * dt_tmpc
     R_dt = R * dt_tmpc
+
+    # Shift pmpc predicted trajectory times ts_pmpc forward (since the state is valid from one step into the future)
+    t_pmpc_pred_traj += ts_pmpc
 
     # Ensure that all times are aligned
     if t_x_cur_est[-1] > t_x_cur[-1]:
@@ -294,6 +308,9 @@ if __name__ == "__main__":
         t_pred_traj = t_pred_traj[t_pred_traj <= t_x_cur[-1]]
         u_pred_traj = u_pred_traj[: len(t_pred_traj)]
         x_pred_traj = x_pred_traj[: len(t_pred_traj)]
+        t_pmpc_pred_traj = t_pmpc_pred_traj[t_pmpc_pred_traj <= t_x_cur[-1]]
+        u_pmpc_pred_traj = u_pmpc_pred_traj[: len(t_pmpc_pred_traj)]
+        x_pmpc_pred_traj = x_pmpc_pred_traj[: len(t_pmpc_pred_traj)]
 
     # Check if the estimated state overlaps with the ground truth state
     if check_gt_est_states:
@@ -436,6 +453,12 @@ if __name__ == "__main__":
     )[0]
     t_x_cur_plot = t_x_cur[x_cur_idc_plot]
     x_cur_plot = x_cur[x_cur_idc_plot]
+    pmpc_to_plot = np.where(
+        (t_pmpc_pred_traj >= t_plot[0]) & (t_pmpc_pred_traj <= t_plot[1])
+    )[0]
+    t_pmpc_pred_traj_plot = t_pmpc_pred_traj[pmpc_to_plot]
+    u_pmpc_pred_traj_plot = u_pmpc_pred_traj[pmpc_to_plot]
+    x_pmpc_pred_traj_plot = x_pmpc_pred_traj[pmpc_to_plot]
 
     # Create figure
     helpers.set_plt_properties()
@@ -498,6 +521,27 @@ if __name__ == "__main__":
             )
             handles_pmpc_tube.append(tube_handle)
         handles.append(handles_pmpc_tube[0][0])
+
+    # Add PMPC prediction to plot
+    if do_plot_pmpc_pred:
+        handles_pmpc_pred = []
+        for t_idx in pmpc_to_plot:
+            for k in k_pmpc_pred:
+                pmpc_pred = Circle(
+                    (
+                        x_pmpc_pred_traj[t_idx, k, 0],
+                        x_pmpc_pred_traj[t_idx, k, 1],
+                    ),
+                    r_pmpc,
+                    facecolor=c_pmpc,
+                    alpha=compute_alpha(
+                        alpha_min, alpha_max, k * ts_pmpc, t_total_plot
+                    ),
+                    zorder=zorder_pmpc_pred,
+                    label="PMPC predicted pos",
+                )
+                handles_pmpc_pred.append(ax.add_patch(pmpc_pred))
+        handles.append(handles_pmpc_pred[0])
 
     # Add TMPC reference trajectory to plot
     if do_plot_tmpc_ref:
@@ -575,17 +619,13 @@ if __name__ == "__main__":
         handles_tmpc_pred = []
         for t_idx in mpc_idc_plot:
             for k in k_pred:
-                if k == 0:
-                    facecolor = c_x0
-                else:
-                    facecolor = c_tmpc
                 tmpc_pred = Circle(
                     (
                         x_pred_traj[t_idx, k, 0],
                         x_pred_traj[t_idx, k, 1],
                     ),
                     r_tmpc,
-                    facecolor=facecolor,
+                    facecolor=c_tmpc,
                     alpha=compute_alpha(
                         alpha_min, alpha_max, k * ts_tmpc, t_total_plot
                     ),

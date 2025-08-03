@@ -13,7 +13,7 @@ data:
   # ros_rec_json_name: 2025-07-31_gaz_meas_noise_falcon_-1_-1_to_0_0
   # runtime_json_name: 2025-07-31_14-43__ReferenceTrajectory_StaticPolyhedronConstraints_0
   # ros_rec_json_name: 2025-07-31_gaz_meas_noise_falcon_-1dot5_-0dot5_to_-0dot5_-0dot5
-  runtime_json_name: 2025-08-03_13-31__ReferenceTrajectory_StaticPolyhedronConstraints_0
+  runtime_json_name: 2025-08-03_15-30__ReferenceTrajectory_StaticPolyhedronConstraints_0
   ros_rec_json_name: 2025-08-03_gaz_meas_noise_falcon_-1dot5_-0dot5_to_-0dot5_-0dot5
 
 print_settings:
@@ -27,6 +27,7 @@ print_settings:
 do_plot:
   obs: True
   pmpc_tube: True
+  pmpc_pred: True
   tmpc_ref: True
   tmpc_tube: True
   tmpc_pred: True
@@ -34,13 +35,14 @@ do_plot:
 
 plot_settings:
   t: [1, 4]
+  k_pmpc_pred: [0]
   k_ref: [0]
   k_pred: [0]
   t_div_tmpc_tube: 20
   linewidth_pmpc_tube: 1
   linewidth_tmpc_tube: 1
   grid_resolution: 0.0005 # needs to be the same value as specified in the map used by the occupancy grid creator
-  r_tmpc_ref: 0.0003
-  r_tmpc: 0.0002
-  r_x0: 0.0002
-  r_x: 0.0001
+  r_pmpc: 0.0012
+  r_tmpc_ref: 0.0009
+  r_tmpc: 0.0006
+  r_x: 0.0003
