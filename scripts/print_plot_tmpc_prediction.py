@@ -677,7 +677,6 @@ if __name__ == "__main__":
             Circle: HandlerCircle(),
             Ellipse: HandlerEllipse(),
         },
-        loc="upper right",
     )
     ax.grid(True)
     ax.set_aspect("equal", adjustable="box")
