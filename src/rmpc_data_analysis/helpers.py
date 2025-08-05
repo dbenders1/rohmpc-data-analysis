@@ -93,6 +93,19 @@ def compute_tube(trajectory, r):
     return tube
 
 
+def resize_fig(fig, scale=1):
+    width_in_inches = 245.71811 / 72
+    orig_size = fig.get_size_inches()
+    aspect_ratio = scale * orig_size[1] / orig_size[0]
+    fig.set_size_inches(width_in_inches, width_in_inches * aspect_ratio)
+    new_size = fig.get_size_inches()
+
+
+def save_fig(fig, fig_path, transparent=False):
+    file_type = fig_path[-3:]
+    fig.savefig(fig_path, format=f"{file_type}", transparent=transparent)
+
+
 def set_fig_properties():
     props = dict()
     props["titlepad"] = 4

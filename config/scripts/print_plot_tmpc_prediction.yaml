@@ -51,3 +51,8 @@ plot_settings:
   r_x: 0.0003
   alpha_tmpc_tube_controller: 0.7
   alpha_tmpc_tube_total: 0.4
+
+save_settings:
+  show_fig: False
+  save_fig: True
+  fig_name: 2025-08-04_rohmpc_cl

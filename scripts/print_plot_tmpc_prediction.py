@@ -145,8 +145,7 @@ if __name__ == "__main__":
         exit(1)
     config_dir = f"{package_dir}/config"
     config_path = f"{config_dir}/scripts/print_plot_tmpc_prediction.yaml"
-    data_dir = f"{package_dir}/data"
-    data_sel_dir = f"{data_dir}/selected_data"
+    fig_dir = f"{package_dir}/data/figures"
 
     # Read configuration parameters
     with open(config_path) as file:
@@ -186,6 +185,11 @@ if __name__ == "__main__":
     r_x = plot_settings["r_x"]
     alpha_tmpc_tube_controller = plot_settings["alpha_tmpc_tube_controller"]
     alpha_tmpc_tube_total = plot_settings["alpha_tmpc_tube_total"]
+
+    save_settings = config["save_settings"]
+    show_fig = save_settings["show_fig"]
+    save_fig = save_settings["save_fig"]
+    fig_name = save_settings["fig_name"]
 
     c_obs_inflated = Colors.GREY.value
     c_pmpc = mcolors.CSS4_COLORS["blue"]
@@ -467,7 +471,7 @@ if __name__ == "__main__":
     # Create figure
     helpers.set_plt_properties()
     props = helpers.set_fig_properties()
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6.4, 3.4))
     handles = []
 
     # Add obstacles to plot
@@ -684,7 +688,7 @@ if __name__ == "__main__":
     # ax.set_xlim(x_mid - xy_diff, x_mid + xy_diff)
     # ax.set_ylim(y_mid - xy_diff, y_mid + xy_diff)
     ax.set_xlim(-1.29, -1.08)
-    ax.set_ylim(-0.74, -0.65)
+    ax.set_ylim(-0.74, -0.63)
     # edge_val = 2
     # ax.set_xlim(-edge_val, edge_val)
     # ax.set_ylim(-edge_val, edge_val)
@@ -700,7 +704,21 @@ if __name__ == "__main__":
             Circle: HandlerCircle(),
             Ellipse: HandlerEllipse(),
         },
+        loc="upper right",
+        bbox_to_anchor=(0.98, 1),
     )
     ax.grid(True)
     ax.set_aspect("equal", adjustable="box")
-    plt.show()
+
+    # Resize figure
+    helpers.resize_fig(fig, scale=1)
+    fig.subplots_adjust(right=0.99, top=0.99, left=0.14, bottom=0.14)
+
+    # Save figures
+    if save_fig:
+        fig_path = f"{fig_dir}/{fig_name}.pdf"
+        helpers.save_fig(fig, fig_path)
+
+    # Show figures
+    if show_fig:
+        plt.show()
