@@ -609,7 +609,7 @@ if __name__ == "__main__":
                         alpha=alpha_tmpc_tube_controller,
                         zorder=zorder_tmpc_tube_controller,
                         closed=True,
-                        label="TMPC tube pos ($\\hat{\\boldsymbol{x}}-\\boldsymbol{z}$)",
+                        label="TMPC tube pos ($\\hat{\\bm{x}}-\\bm{z}$)",
                     )
                     handles_tmpc_tube_controller.append(ax.add_patch(polygon))
             # Plot the shaded area between the controller and total tube
@@ -629,7 +629,7 @@ if __name__ == "__main__":
                         alpha=alpha_tmpc_tube_total,
                         zorder=zorder_tmpc_tube_total,
                         closed=True,
-                        label="TMPC tube pos ($\\boldsymbol{x}-\\hat{\\boldsymbol{x}}$)",
+                        label="TMPC tube pos ($\\bm{x}-\\hat{\\bm{x}}$)",
                     )
                     handles_tmpc_tube_total.append(ax.add_patch(polygon))
         handles.append(handles_tmpc_tube_controller[0])
