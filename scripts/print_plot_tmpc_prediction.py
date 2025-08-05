@@ -11,7 +11,7 @@ import numpy as np
 from enum import Enum
 from matplotlib.legend_handler import HandlerPatch
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Circle, Ellipse, Patch, Polygon
+from matplotlib.patches import Circle, Ellipse, Polygon
 from os import path
 from pathlib import Path
 from rmpc_data_analysis import helpers
@@ -162,6 +162,7 @@ if __name__ == "__main__":
 
     do_plot_settings = config["do_plot"]
     do_plot_obs = do_plot_settings["obs"]
+    do_plot_obs_inflation = do_plot_settings["obs_inflation"]
     do_plot_pmpc_tube = do_plot_settings["pmpc_tube"]
     do_plot_pmpc_pred = do_plot_settings["pmpc_pred"]
     do_plot_tmpc_ref = do_plot_settings["tmpc_ref"]
@@ -483,14 +484,27 @@ if __name__ == "__main__":
                     verts["orig"], closed=True, edgecolor="black", facecolor="black"
                 )
             handles_obs.append(ax.add_patch(obs_polygon))
-            obs_polygon_long = Polygon(
-                verts["long"], closed=True, color=c_obs_inflated, zorder=zorder_obs
-            )
-            handles_obs.append(ax.add_patch(obs_polygon_long))
+        handles.append(handles_obs[0])
+    if do_plot_obs_inflation:
+        handles_obs_inflation = []
+        for obs_idx, verts in enumerate(obs_verts):
+            if obs_idx == 0:
+                obs_polygon_long = Polygon(
+                    verts["long"],
+                    closed=True,
+                    color=c_obs_inflated,
+                    zorder=zorder_obs,
+                    label="Obstacle inflation",
+                )
+            else:
+                obs_polygon_long = Polygon(
+                    verts["long"], closed=True, color=c_obs_inflated, zorder=zorder_obs
+                )
+            handles_obs_inflation.append(ax.add_patch(obs_polygon_long))
             obs_polygon_wide = Polygon(
                 verts["wide"], closed=True, color=c_obs_inflated, zorder=zorder_obs
             )
-            handles_obs.append(ax.add_patch(obs_polygon_wide))
+            handles_obs_inflation.append(ax.add_patch(obs_polygon_wide))
             for i in range(4):
                 obs_polygon_circle = Circle(
                     verts["orig"][i, :],
@@ -499,10 +513,8 @@ if __name__ == "__main__":
                     fill=True,
                     zorder=zorder_obs,
                 )
-                handles_obs.append(ax.add_patch(obs_polygon_circle))
-        handles.append(handles_obs[0])
-        inflated_obs_patch = Patch(color=c_obs_inflated, label="$\\mathcal{R}$")
-        handles.append(inflated_obs_patch)
+                handles_obs_inflation.append(ax.add_patch(obs_polygon_circle))
+        handles.append(handles_obs_inflation[0])
 
     # Compute PMPC tube around reference trajectory and add to plot
     if do_plot_pmpc_tube:

@@ -27,7 +27,8 @@ print_settings:
   print_track_err: []
 
 do_plot:
-  obs: True
+  obs: False
+  obs_inflation: True
   pmpc_tube: True
   pmpc_pred: True
   tmpc_ref: True
