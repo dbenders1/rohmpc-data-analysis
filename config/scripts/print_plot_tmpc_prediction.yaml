@@ -31,9 +31,9 @@ do_plot:
   obs_inflation: True
   pmpc_tube: True
   pmpc_pred: True
-  tmpc_ref: True
+  tmpc_ref: False
   tmpc_tube: True
-  tmpc_pred: True
+  tmpc_pred: False
   x: True
 
 plot_settings:
