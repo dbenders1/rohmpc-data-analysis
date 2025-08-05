@@ -1,5 +1,37 @@
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
+
+from enum import Enum
+from matplotlib.legend_handler import HandlerPatch
+from matplotlib.patches import Circle
+
+FLOAT_TOL = 1e-6
+NU = 4
+NX = 12
+
+
+class Colors(Enum):
+    GREY = (0.859375, 0.859375, 0.859375)
+    ORANGE = (1, 0.6484375, 0)
+    PURPLE = (0.5, 0, 0.5)
+    VIRIDIS_0 = (0.21875, 0.347656, 0.546875)
+
+
+class HandlerCircle(HandlerPatch):
+    def create_artists(
+        self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
+    ):
+        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
+        p = Circle(xy=center, radius=height / 2)
+        self.update_prop(p, orig_handle, legend)
+        p.set_transform(trans)
+        return [p]
+
+
+def compute_alpha(alpha_min, alpha_max, t, t_end):
+    return alpha_max - (alpha_max - alpha_min) * (t / t_end) if t_end > 0 else alpha_max
 
 
 def compute_rectangle_vertices(pos, yaw_angle, length, width):
@@ -50,8 +82,44 @@ def compute_inflated_obstacle_vertices(obs_list, robot_radius):
     return obs_verts
 
 
+def compute_pobj(u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, Q_dt, R_dt, P_dt):
+    pobj = 0
+    for k in range(N):
+        pobj += (
+            (x_pred_traj[k, :] - x_ref_traj[k, :])
+            @ Q_dt
+            @ (x_pred_traj[k, :] - x_ref_traj[k, :])
+        )
+        pobj += (
+            (u_pred_traj[k, :] - u_ref_traj[k, :])
+            @ R_dt
+            @ (u_pred_traj[k, :] - u_ref_traj[k, :])
+        )
+    pobj += (
+        (x_pred_traj[N, :] - x_ref_traj[N, :])
+        @ P_dt
+        @ (x_pred_traj[N, :] - x_ref_traj[N, :])
+    )
+    return pobj
+
+
 def compute_rotation_matrix_2d(angle):
     return np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
+
+
+def compute_track_err(
+    u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, u_idc, x_idc
+):
+    Q_dt = np.zeros((NX, NX))
+    Q_dt[x_idc, x_idc] = 1
+    R_dt = np.zeros((NU, NU))
+    R_dt[u_idc, u_idc] = 1
+    P_dt = np.zeros((NX, NX))
+    P_dt[x_idc, x_idc] = 1
+    track_err = compute_pobj(
+        u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, Q_dt, R_dt, P_dt
+    )
+    return track_err
 
 
 def compute_tube(trajectory, r):

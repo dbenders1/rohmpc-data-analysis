@@ -1,123 +1,19 @@
 import argparse
 import json
 import logging
-import math
 import yaml
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 
-from enum import Enum
-from matplotlib.legend_handler import HandlerPatch
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Circle, Ellipse, Polygon
+from matplotlib.patches import Circle, Polygon
 from os import path
 from pathlib import Path
 from rmpc_data_analysis import helpers
 
-FLOAT_TOL = 1e-6
-NU = 4
-NX = 12
-
-
-class Colors(Enum):
-    GREY = (0.859375, 0.859375, 0.859375)
-    ORANGE = (1, 0.6484375, 0)
-    PURPLE = (0.5, 0, 0.5)
-    VIRIDIS_0 = (0.21875, 0.347656, 0.546875)
-
-
-class HandlerCircle(HandlerPatch):
-    def create_artists(
-        self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
-    ):
-        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
-        p = Circle(xy=center, radius=height / 2)
-        self.update_prop(p, orig_handle, legend)
-        p.set_transform(trans)
-        return [p]
-
-
-class HandlerEllipse(HandlerPatch):
-    def create_artists(
-        self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
-    ):
-        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
-        p = Ellipse(xy=center, width=width, height=height)
-        self.update_prop(p, orig_handle, legend)
-        p.set_transform(trans)
-        return [p]
-
-
-def compute_pobj(u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, Q_dt, R_dt, P_dt):
-    pobj = 0
-    for k in range(N):
-        pobj += (
-            (x_pred_traj[k, :] - x_ref_traj[k, :])
-            @ Q_dt
-            @ (x_pred_traj[k, :] - x_ref_traj[k, :])
-        )
-        pobj += (
-            (u_pred_traj[k, :] - u_ref_traj[k, :])
-            @ R_dt
-            @ (u_pred_traj[k, :] - u_ref_traj[k, :])
-        )
-    pobj += (
-        (x_pred_traj[N, :] - x_ref_traj[N, :])
-        @ P_dt
-        @ (x_pred_traj[N, :] - x_ref_traj[N, :])
-    )
-    return pobj
-
-
-def compute_track_err(
-    u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, u_idc, x_idc
-):
-    Q_dt = np.zeros((NX, NX))
-    Q_dt[x_idc, x_idc] = 1
-    R_dt = np.zeros((NU, NU))
-    R_dt[u_idc, u_idc] = 1
-    P_dt = np.zeros((NX, NX))
-    P_dt[x_idc, x_idc] = 1
-    track_err = compute_pobj(
-        u_pred_traj, x_pred_traj, u_ref_traj, x_ref_traj, N, Q_dt, R_dt, P_dt
-    )
-    return track_err
-
 
 np.set_printoptions(threshold=np.inf)
-
-
-def compute_alpha(alpha_min, alpha_max, t, t_end):
-    return alpha_max - (alpha_max - alpha_min) * (t / t_end) if t_end > 0 else alpha_max
-
-
-def quaternion_to_zyx_euler(q):
-    """
-    Convert a quaternion into ZYX Euler angles (roll, pitch, yaw)
-    q = [qw, qx, qy, qz]
-    """
-    qw, qx, qy, qz = q
-
-    # Roll (x-axis rotation)
-    sinr_cosp = 2 * (qw * qx + qy * qz)
-    cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
-    roll = math.atan2(sinr_cosp, cosr_cosp)
-
-    # Pitch (y-axis rotation)
-    sinp = 2 * (qw * qy - qz * qx)
-    if abs(sinp) >= 1:
-        pitch = math.copysign(math.pi / 2, sinp)  # use 90 degrees if out of range
-    else:
-        pitch = math.asin(sinp)
-
-    # Yaw (z-axis rotation)
-    siny_cosp = 2 * (qw * qz + qx * qy)
-    cosy_cosp = 1 - 2 * (qy * qy + qz * qz)
-    yaw = math.atan2(siny_cosp, cosy_cosp)
-
-    return roll, pitch, yaw
 
 
 if __name__ == "__main__":
@@ -191,10 +87,10 @@ if __name__ == "__main__":
     save_fig = save_settings["save_fig"]
     fig_name = save_settings["fig_name"]
 
-    c_obs_inflated = Colors.GREY.value
+    c_obs_inflated = helpers.Colors.GREY.value
     c_pmpc = mcolors.CSS4_COLORS["blue"]
     c_tmpc_ref = mcolors.CSS4_COLORS["red"]
-    c_tmpc = Colors.ORANGE.value
+    c_tmpc = helpers.Colors.ORANGE.value
     c_x = mcolors.CSS4_COLORS["green"]
     c_xf = mcolors.CSS4_COLORS["black"]
     zorder_obs = 0
@@ -323,7 +219,9 @@ if __name__ == "__main__":
     # Check if the estimated state overlaps with the ground truth state
     if check_gt_est_states:
         x_cur_mpc_start = x_cur[np.where(np.isin(t_x_cur, t_x_cur_est))[0], :]
-        states_equal = np.all(np.abs(x_cur_mpc_start - x_cur_est) < FLOAT_TOL, axis=1)
+        states_equal = np.all(
+            np.abs(x_cur_mpc_start - x_cur_est) < helpers.FLOAT_TOL, axis=1
+        )
         if np.all(states_equal):
             log.warning(
                 "The estimated state matches the ground truth state at the MPC start times"
@@ -370,7 +268,7 @@ if __name__ == "__main__":
         if t_x_cur_est_idx < 0:
             pobj_comp = np.zeros(n_tmpc)
             for t_idx in range(n_tmpc):
-                pobj_comp[t_idx] = compute_pobj(
+                pobj_comp[t_idx] = helpers.compute_pobj(
                     u_pred_traj[t_idx, :, :],
                     x_pred_traj[t_idx, :, :],
                     u_ref_traj[t_idx, :, :],
@@ -381,7 +279,7 @@ if __name__ == "__main__":
                     P,
                 )
         else:
-            pobj_comp = compute_pobj(
+            pobj_comp = helpers.compute_pobj(
                 u_pred_traj[t_pred_traj_idx, :, :],
                 x_pred_traj[t_pred_traj_idx, :, :],
                 u_ref_traj[t_ref_traj_idx, :, :],
@@ -397,14 +295,14 @@ if __name__ == "__main__":
     if print_track_err:
         for key in print_track_err:
             if key == "total":
-                u_idc = np.arange(NU)
-                x_idc = np.arange(NX)
+                u_idc = np.arange(helpers.NU)
+                x_idc = np.arange(helpers.NX)
             elif key == "u":
-                u_idc = np.arange(NU)
+                u_idc = np.arange(helpers.NU)
                 x_idc = []
             elif key == "x":
                 u_idc = []
-                x_idc = np.arange(NX)
+                x_idc = np.arange(helpers.NX)
             elif key == "p":
                 u_idc = []
                 x_idc = np.arange(3)
@@ -416,7 +314,7 @@ if __name__ == "__main__":
             if t_x_cur_est_idx < 0:
                 track_err = np.zeros(n_tmpc)
                 for t_idx in range(n_tmpc):
-                    track_err[t_idx] = compute_track_err(
+                    track_err[t_idx] = helpers.compute_track_err(
                         u_pred_traj[t_idx, :, :],
                         x_pred_traj[t_idx, :, :],
                         u_ref_traj[t_idx, :, :],
@@ -426,7 +324,7 @@ if __name__ == "__main__":
                         x_idc,
                     )
             else:
-                track_err = compute_track_err(
+                track_err = helpers.compute_track_err(
                     u_pred_traj[t_pred_traj_idx, :, :],
                     x_pred_traj[t_pred_traj_idx, :, :],
                     u_ref_traj[t_ref_traj_idx, :, :],
@@ -553,7 +451,7 @@ if __name__ == "__main__":
                     ),
                     r_pmpc,
                     facecolor=c_pmpc,
-                    alpha=compute_alpha(
+                    alpha=helpers.compute_alpha(
                         alpha_min, alpha_max, k * ts_pmpc, t_total_plot
                     ),
                     zorder=zorder_pmpc_pred,
@@ -574,7 +472,7 @@ if __name__ == "__main__":
                     ),
                     r_tmpc_ref,
                     facecolor=c_tmpc_ref,
-                    alpha=compute_alpha(
+                    alpha=helpers.compute_alpha(
                         alpha_min, alpha_max, k * ts_tmpc, t_total_plot
                     ),
                     zorder=zorder_tmpc_ref,
@@ -651,7 +549,7 @@ if __name__ == "__main__":
                     ),
                     r_tmpc,
                     facecolor=c_tmpc,
-                    alpha=compute_alpha(
+                    alpha=helpers.compute_alpha(
                         alpha_min, alpha_max, k * ts_tmpc, t_total_plot
                     ),
                     zorder=zorder_tmpc_pred,
@@ -668,7 +566,7 @@ if __name__ == "__main__":
                 (x_cur[t_idx, 0], x_cur[t_idx, 1]),
                 r_x,
                 facecolor=c_x,
-                alpha=compute_alpha(
+                alpha=helpers.compute_alpha(
                     alpha_min,
                     alpha_max,
                     (t_idx - x_cur_idc_plot[0]) * ts_sim,
@@ -700,10 +598,7 @@ if __name__ == "__main__":
     ax.set_axisbelow(True)
     ax.legend(
         handles=handles,
-        handler_map={
-            Circle: HandlerCircle(),
-            Ellipse: HandlerEllipse(),
-        },
+        handler_map={Circle: helpers.HandlerCircle()},
         loc="upper right",
         bbox_to_anchor=(0.98, 1),
     )
