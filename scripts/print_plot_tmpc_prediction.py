@@ -184,6 +184,8 @@ if __name__ == "__main__":
     r_tmpc_ref = plot_settings["r_tmpc_ref"]
     r_tmpc = plot_settings["r_tmpc"]
     r_x = plot_settings["r_x"]
+    alpha_tmpc_tube_controller = plot_settings["alpha_tmpc_tube_controller"]
+    alpha_tmpc_tube_total = plot_settings["alpha_tmpc_tube_total"]
 
     c_obs_inflated = Colors.GREY.value
     c_pmpc = mcolors.CSS4_COLORS["blue"]
@@ -195,9 +197,10 @@ if __name__ == "__main__":
     zorder_pmpc_tube = 1
     zorder_pmpc_pred = 2
     zorder_tmpc_ref = 3
-    zorder_tmpc_tube = 1
-    zorder_tmpc_pred = 4
-    zorder_x = 5
+    zorder_tmpc_tube_controller = 4
+    zorder_tmpc_tube_total = 5
+    zorder_tmpc_pred = 6
+    zorder_x = 7
     alpha_max = 1
     alpha_min = 0.5
 
@@ -581,50 +584,56 @@ if __name__ == "__main__":
         handles_tmpc_tube = []
         pred_traj_pos_tube = x_pred_traj_plot[::t_div_tmpc_tube, :, :2]
         for t_idx in range(pred_traj_pos_tube.shape[0]):
-            tube = helpers.compute_tube(
+            tube_controller = helpers.compute_tube(
+                pred_traj_pos_tube[t_idx, :, :],
+                c_o * s_pred,
+            )
+            tube_total = helpers.compute_tube(
                 pred_traj_pos_tube[t_idx, :, :],
                 c_o * (s_pred + epsilon),
             )
-            # Plot line segment connecting the inner and outer tube - to explicitly show the observer error
-            ax.plot(
-                tube[:2, 0, 0],
-                tube[:2, 0, 1],
-                color=c_tmpc,
-                linewidth=linewidth_tmpc_tube,
-                zorder=zorder_tmpc_tube,
-            )
-            # Plot the tube boundaries
-            for tube_idx in range(tube.shape[0]):
-                tube_handle = ax.plot(
-                    tube[tube_idx, :, 0],
-                    tube[tube_idx, :, 1],
-                    color=c_tmpc,
-                    linewidth=linewidth_tmpc_tube,
-                    zorder=zorder_tmpc_tube,
-                    label="TMPC tube pos",
-                )
-                handles_tmpc_tube.append(tube_handle)
-            # Plot the shaded area of the tube
-            patches = []
-            for i in range(tube.shape[1] - 1):
-                for j in range(tube.shape[0] - 1):
+            # Plot the shaded area of the controller tube
+            handles_tmpc_tube_controller = []
+            for i in range(tube_controller.shape[0] - 1):
+                for j in range(tube_controller.shape[1] - 1):
                     area = [
-                        tube[j, i],
-                        tube[j, i + 1],
-                        tube[j + 1, i + 1],
-                        tube[j + 1, i],
+                        tube_controller[i, j],
+                        tube_controller[i, j + 1],
+                        tube_controller[i + 1, j + 1],
+                        tube_controller[i + 1, j],
                     ]
-                    polygon = Polygon(area, closed=True)
-                    patches.append(polygon)
-            p = PatchCollection(
-                patches,
-                facecolor=c_tmpc,
-                edgecolor="none",
-                alpha=alpha_min,
-                zorder=zorder_tmpc_tube,
-            )
-            ax.add_collection(p)
-        handles.append(handles_tmpc_tube[0][0])
+                    polygon = Polygon(
+                        area,
+                        facecolor=c_tmpc,
+                        edgecolor="none",
+                        alpha=alpha_tmpc_tube_controller,
+                        zorder=zorder_tmpc_tube_controller,
+                        closed=True,
+                        label="TMPC tube pos ($\\hat{\\boldsymbol{x}}-\\boldsymbol{z}$)",
+                    )
+                    handles_tmpc_tube_controller.append(ax.add_patch(polygon))
+            # Plot the shaded area between the controller and total tube
+            handles_tmpc_tube_total = []
+            for i in range(tube_controller.shape[0]):
+                for j in range(tube_controller.shape[1] - 1):
+                    area = [
+                        tube_controller[i, j],
+                        tube_controller[i, j + 1],
+                        tube_total[i, j + 1],
+                        tube_total[i, j],
+                    ]
+                    polygon = Polygon(
+                        area,
+                        facecolor=c_tmpc,
+                        edgecolor="none",
+                        alpha=alpha_tmpc_tube_total,
+                        zorder=zorder_tmpc_tube_total,
+                        closed=True,
+                        label="TMPC tube pos ($\\boldsymbol{x}-\\hat{\\boldsymbol{x}}$)",
+                    )
+                    handles_tmpc_tube_total.append(ax.add_patch(polygon))
+        handles.append(handles_tmpc_tube_controller[0])
+        handles.append(handles_tmpc_tube_total[0])
 
     # Add TMPC prediction to plot
     if do_plot_tmpc_pred:

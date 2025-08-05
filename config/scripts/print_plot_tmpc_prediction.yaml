@@ -49,3 +49,5 @@ plot_settings:
   r_tmpc_ref: 0.0009
   r_tmpc: 0.0006
   r_x: 0.0003
+  alpha_tmpc_tube_controller: 0.7
+  alpha_tmpc_tube_total: 0.4
