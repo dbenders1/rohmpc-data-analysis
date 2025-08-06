@@ -55,4 +55,4 @@ plot_settings:
 save_settings:
   show_fig: False
   save_fig: True
-  fig_name: 2025-08-04_rohmpc_cl
+  fig_name: rohmpc
