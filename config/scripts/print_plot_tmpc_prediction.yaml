@@ -1,20 +1,4 @@
 data:
-  # runtime_json_name: 2025-07-16_18-25__ReferenceTrajectory_StaticPolyhedronConstraints_0
-  # ros_rec_json_name: 2025-07-16_sim_falcon_hmpc_no_dist_K_no_meas_noise_L
-  # ros_rec_json_name: 2025-07-17_sim_falcon_hmpc_no_dist_K_no_meas_noise_L
-  # ros_rec_json_name: 2025-07-17_sim_falcon_hmpc_Qpos10_no_dist_K_no_meas_noise_L
-  # ros_rec_json_name: 2025-07-17_sim_falcon_hmpc_Q1000eye_R1000eye_no_dist_K_no_meas_noise_L
-  # ros_rec_json_name: 2025-07-18_sim_falcon_hmpc_R1000eye_no_dist_K_no_meas_noise_L
-  # runtime_json_name: 2025-07-29_18-54__ReferenceTrajectory_StaticPolyhedronConstraints_0
-  # ros_rec_json_name: 2025-07-29_gaz_meas_noise_falcon_check_tmpc_cost_rohmpc
-  # runtime_json_name: 2025-07-30_11-57__ReferenceTrajectory_StaticPolyhedronConstraints_0
-  # ros_rec_json_name: 2025-07-29_gaz_meas_noise_falcon_-1_-1_to_0_0
-  # runtime_json_name: 2025-07-31_09-57__ReferenceTrajectory_StaticPolyhedronConstraints_0
-  # ros_rec_json_name: 2025-07-31_gaz_meas_noise_falcon_-1_-1_to_0_0
-  # runtime_json_name: 2025-07-31_14-43__ReferenceTrajectory_StaticPolyhedronConstraints_0
-  # ros_rec_json_name: 2025-07-31_gaz_meas_noise_falcon_-1dot5_-0dot5_to_-0dot5_-0dot5
-  # runtime_json_name: 2025-08-03_15-30__ReferenceTrajectory_StaticPolyhedronConstraints_0
-  # ros_rec_json_name: 2025-08-03_gaz_meas_noise_falcon_-1dot5_-0dot5_to_-0dot5_-0dot5
   runtime_json_name: 2025-08-05_06-00__ReferenceTrajectory_StaticPolyhedronConstraints_0
   ros_rec_json_name: 2025-08-04_gaz_meas_noise_falcon_-1dot5_-0dot5_to_-0dot5_-0dot5
 
