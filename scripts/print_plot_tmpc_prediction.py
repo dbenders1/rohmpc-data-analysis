@@ -27,10 +27,10 @@ if __name__ == "__main__":
 
     # User settings
     package_dir = Path(__file__).parents[1]
-    runtime_json_dir = f"{package_dir}/../rmpc/mpc_tools/recorded_data"
+    runtime_json_dir = f"{package_dir}/../mpc/mpc_tools/recorded_data"
     if not path.exists(runtime_json_dir):
         log.warning(
-            f"Directory {runtime_json_dir} does not exist! Please ensure that the rmpc submodule is cloned"
+            f"Directory {runtime_json_dir} does not exist! Please ensure that the mpc submodule is cloned"
         )
         exit(1)
     ros_rec_json_dir = f"{package_dir}/../rosbag2json/data/converted_bags"
