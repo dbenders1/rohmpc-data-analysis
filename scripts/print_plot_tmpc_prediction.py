@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib.patches import Circle, Polygon
 from os import path
 from pathlib import Path
-from rmpc_data_analysis import helpers
+from rohmpc_data_analysis import helpers
 
 
 np.set_printoptions(threshold=np.inf)
