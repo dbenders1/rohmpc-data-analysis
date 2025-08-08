@@ -40,7 +40,7 @@ if __name__ == "__main__":
         )
         exit(1)
     config_dir = f"{package_dir}/config"
-    config_path = f"{config_dir}/scripts/print_plot_tmpc_prediction.yaml"
+    config_path = f"{config_dir}/scripts/print_plot_rohmpc_data.yaml"
     fig_dir = f"{package_dir}/data/figures"
 
     # Read configuration parameters
