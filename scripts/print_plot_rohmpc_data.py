@@ -86,6 +86,7 @@ if __name__ == "__main__":
     show_fig = save_settings["show_fig"]
     save_fig = save_settings["save_fig"]
     fig_name = save_settings["fig_name"]
+    fig_extension = save_settings["fig_extension"]
 
     c_obs_inflated = helpers.Colors.GREY.value
     c_pmpc = mcolors.CSS4_COLORS["blue"]
@@ -602,7 +603,7 @@ if __name__ == "__main__":
 
     # Save figures
     if save_fig:
-        fig_path = f"{fig_dir}/{fig_name}.pdf"
+        fig_path = f"{fig_dir}/{fig_name}.{fig_extension}"
         helpers.save_fig(fig, fig_path)
 
     # Show figures

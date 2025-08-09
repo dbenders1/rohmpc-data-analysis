@@ -40,3 +40,4 @@ save_settings:
   show_fig: False
   save_fig: True
   fig_name: rohmpc
+  fig_extension: pdf
